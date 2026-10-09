@@ -7,3 +7,11 @@ instance/
 .env
 .env.*
 !.env.example
+
+# Large local datasets and generated manifests (do not commit image archives)
+data/raw/*
+!data/raw/.gitkeep
+data/metadata/*_import_manifest.csv
+data/metadata/image_audit*.csv
+data/metadata/curated_manifest.csv
+data/metadata/image_manifest.csv
