@@ -16,6 +16,10 @@ st.markdown('<div class="title">Verify your account</div>', unsafe_allow_html=Tr
 st.markdown('<p class="muted">Complete email and mobile verification before secure login.</p>', unsafe_allow_html=True)
 for delivery_error in st.session_state.pop("verification_delivery_errors", []):
     st.error(delivery_error)
+if st.session_state.get("dev_otp_codes"):
+    st.warning("Development-only OTPs (never enable this in production):")
+    for purpose, details in st.session_state["dev_otp_codes"].items():
+        st.code(f"{purpose}: {details['code']}")
 
 email = st.text_input("Email", value=st.session_state.get("verify_email", ""), key="verify_email_input")
 email_code = st.text_input("Email verification code", max_chars=6, type="password")
