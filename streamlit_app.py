@@ -1,5 +1,5 @@
 import streamlit as st
-from streamlit_auth import api_post
+from streamlit_native_auth import authenticate, issue_otp, session_login
 
 st.set_page_config(
     page_title="ATHARVADRISHTI — An Intelligent and Explainable Plant Health Analysis System",
@@ -73,6 +73,15 @@ div[data-testid="stButton"] > button[kind="primary"]:hover {{
     background:var(--green2) !important;
     color:#fff !important;
 }}
+.nav-link {{
+    display:flex;align-items:center;justify-content:center;min-height:42px;width:100%;
+    padding:8px 10px;border:1px solid var(--line);border-radius:12px;
+    background:var(--surface);color:var(--text) !important;text-decoration:none !important;
+    font-size:13px;font-weight:700;box-shadow:0 5px 16px rgba(18,60,35,.06);
+    text-align:center;transition:transform .15s ease,border-color .15s ease;
+}}
+.nav-link:hover {{border-color:var(--green2);color:var(--green) !important;transform:translateY(-1px)}}
+.nav-link.primary {{background:var(--button);color:var(--button-text) !important;border-color:var(--button)}}
 
 div[data-testid="stTextInput"] input {{
     background:var(--surface) !important;
@@ -233,8 +242,8 @@ input, button {{max-width:100%}}
     unsafe_allow_html=True,
 )
 
-# Extra spacer prevents overlap with Streamlit's own top toolbar.
-st.markdown('<div style="height:12px"></div>', unsafe_allow_html=True)
+# A real anchor target makes Home links reliably return to the top.
+st.markdown('<div id="top" style="height:1px"></div><div style="height:12px"></div>', unsafe_allow_html=True)
 
 # -----------------------------------------------------------------------------
 # TOP HEADER
@@ -244,24 +253,18 @@ with nav:
     n1, n2, n3, n4, n5, n6 = st.columns([3.0, .9, 1.0, 1.0, 1.2, 1.0], gap="small")
     with n1:
         st.markdown(
-            '<div class="brand-wrap"><span class="nav-row-anchor"></span><div class="brand-mark">🌿</div><div><div class="brand-title">ATHARVADRISHTI</div><div class="brand-sub">AN INTELLIGENT AND EXPLAINABLE PLANT HEALTH ANALYSIS SYSTEM</div></div></div>',
+            '<div class="brand-wrap"><div class="brand-mark">🌿</div><div><div class="brand-title">ATHARVADRISHTI</div><div class="brand-sub">AN INTELLIGENT AND EXPLAINABLE PLANT HEALTH ANALYSIS SYSTEM</div></div></div>',
             unsafe_allow_html=True,
         )
     with n2:
-        if st.button("⌂ Home", use_container_width=True, key="nav_home"):
-            st.session_state["top"] = True
+        st.markdown('<a class="nav-link" href="#top">⌂ Home</a>', unsafe_allow_html=True)
     with n3:
-        if st.button("▤ Features", use_container_width=True, key="nav_features"):
-            st.session_state["jump_features"] = True
+        st.markdown('<a class="nav-link" href="#features">▤ Features</a>', unsafe_allow_html=True)
     with n4:
-        if st.button("🔐 Login", use_container_width=True, key="nav_login"):
-            st.session_state["jump_login"] = True
+        st.markdown('<a class="nav-link" href="#login">🔐 Login</a>', unsafe_allow_html=True)
     with n5:
         if st.button("📊 Dashboard", use_container_width=True, key="nav_dashboard"):
-            if st.session_state.get("authenticated"):
-                st.switch_page("pages/5_Health_Dashboard.py")
-            else:
-                st.switch_page("pages/1_Login.py")
+            st.switch_page("pages/5_Health_Dashboard.py")
     with n6:
         mode_label = "☾ Dark" if not is_dark else "☀ Light"
         if st.button(mode_label, use_container_width=True, key="nav_theme"):
@@ -287,8 +290,7 @@ with left:
         if st.button("Start Now →", use_container_width=True, type="primary", key="hero_start"):
             st.switch_page("pages/1_AI_Scanner.py")
     with b2:
-        if st.button("Learn More ↓", use_container_width=True, key="hero_more"):
-            st.session_state["jump_features"] = True
+        st.markdown('<a class="nav-link" href="#features">Learn More ↓</a>', unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
 with right:
@@ -317,16 +319,28 @@ password = st.text_input("Password", type="password", key="landing_password", pl
 l1, l2 = st.columns(2)
 with l1:
     if st.button("Login", use_container_width=True, type="primary", key="landing_login"):
-        r, d = api_post("/api/product-auth/login", {"email": identity, "password": password})
-        if r is not None and r.ok:
-            if d.get("two_factor_required"):
-                st.session_state["login_email"] = identity
+        user, error = authenticate(identity, password)
+        if error == "verification_required" and user:
+            st.session_state["verify_email"] = user["email"]
+            st.session_state["verify_phone"] = user["phone"]
+            st.warning("Please complete email and mobile verification first.")
+            st.switch_page("pages/3_Verify.py")
+        elif error:
+            st.error(error)
+        elif user:
+            if user.get("two_factor_enabled"):
+                channel = user.get("two_factor_channel", "email")
+                if channel not in {"email", "sms"}:
+                    channel = "email"
+                destination = user["email"] if channel == "email" else user["phone"]
+                issue_otp(user["id"], "login_2fa", channel, destination)
+                st.session_state["pending_2fa_user_id"] = user["id"]
+                st.session_state["login_2fa_channel"] = channel
                 st.switch_page("pages/4_Two_Factor.py")
             else:
-                st.session_state["access_token"] = d.get("access_token", "")
+                session_login(user)
+                st.success("Login successful.")
                 st.switch_page("pages/1_AI_Scanner.py")
-        else:
-            st.error(d.get("error", "Login failed. Configure the authentication API."))
 with l2:
     if st.button("Sign Up", use_container_width=True, key="landing_signup"):
         st.switch_page("pages/2_Sign_Up.py")
