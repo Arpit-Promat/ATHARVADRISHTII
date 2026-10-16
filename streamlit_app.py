@@ -329,6 +329,7 @@ with l1:
             st.error(error)
         elif user:
             if user.get("two_factor_enabled"):
+                st.session_state["login_identity"] = identity
                 channel = user.get("two_factor_channel", "email")
                 if channel not in {"email", "sms"}:
                     channel = "email"
