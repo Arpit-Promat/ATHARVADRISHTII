@@ -43,8 +43,11 @@ if submitted:
                 except Exception as exc:
                     delivery_errors.append(f"{label}: {exc}")
             if delivery_errors:
-                st.error("Your account was created, but verification delivery needs configuration: " + " ".join(delivery_errors))
-                st.info("Configure the email/SMS provider in Streamlit Secrets, then use Resend codes on the Verify page.")
+                st.session_state["verification_delivery_errors"] = [
+                    "Your account was created, but verification delivery needs configuration.",
+                    *delivery_errors,
+                    "Add the provider credentials in Streamlit Secrets, then use Resend codes on this page.",
+                ]
             else:
                 st.success("Account created. Verification codes were sent.")
             if st.session_state.get("dev_otp_codes"):
