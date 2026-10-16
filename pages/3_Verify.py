@@ -1,5 +1,5 @@
 import streamlit as st
-from streamlit_native_auth import get_user_by_email, verify_otp, mark_email_verified, mark_mobile_verified, issue_otp, set_2fa_channel, set_2fa_enabled
+from streamlit_native_auth import get_user_by_email, verify_otp, mark_email_verified, mark_mobile_verified, issue_otp, set_2fa_channel, set_2fa_enabled, normalize_phone
 
 st.set_page_config(page_title="Verify Account | ATHARVADRISHTI", page_icon="🌿", layout="centered")
 st.markdown("""
@@ -14,6 +14,8 @@ st.markdown('<div class="card">', unsafe_allow_html=True)
 st.markdown("## 🌿 ATHARVADRISHTI")
 st.markdown('<div class="title">Verify your account</div>', unsafe_allow_html=True)
 st.markdown('<p class="muted">Complete email and mobile verification before secure login.</p>', unsafe_allow_html=True)
+for delivery_error in st.session_state.pop("verification_delivery_errors", []):
+    st.error(delivery_error)
 
 email = st.text_input("Email", value=st.session_state.get("verify_email", ""), key="verify_email_input")
 email_code = st.text_input("Email verification code", max_chars=6, type="password")
@@ -30,8 +32,8 @@ phone = st.text_input("Mobile number", value=st.session_state.get("verify_phone"
 mobile_code = st.text_input("Mobile verification OTP", max_chars=6, type="password")
 if st.button("Verify Mobile", use_container_width=True):
     user = get_user_by_email(email)
-    phone_user = get_user_by_email(email) if phone.strip() == (user or {}).get("phone", "") else None
-    if user and phone_user and verify_otp(user["id"], "mobile_verification", mobile_code, "sms"):
+    phone_matches = bool(user and normalize_phone(phone) == user["phone"])
+    if user and phone_matches and verify_otp(user["id"], "mobile_verification", mobile_code, "sms"):
         mark_mobile_verified(user["id"])
         st.session_state["mobile_verified"] = True
         st.success("Mobile number verified successfully.")
@@ -49,9 +51,12 @@ if email_done and mobile_done and user:
     if st.button("Send 2FA setup code", use_container_width=True):
         set_2fa_channel(user["id"], channel)
         destination = user["email"] if channel == "email" else user["phone"]
-        issue_otp(user["id"], "two_factor_setup", channel, destination)
-        st.session_state["2fa_setup_sent"] = True
-        st.success("2FA setup code sent.")
+        try:
+            issue_otp(user["id"], "two_factor_setup", channel, destination)
+            st.session_state["2fa_setup_sent"] = True
+            st.success("2FA setup code sent.")
+        except Exception as exc:
+            st.error(f"Could not send the 2FA code: {exc}")
     if st.session_state.get("2fa_setup_sent"):
         setup_code = st.text_input("2FA setup code", max_chars=6, type="password")
         if st.button("Enable 2FA", use_container_width=True, type="primary"):
