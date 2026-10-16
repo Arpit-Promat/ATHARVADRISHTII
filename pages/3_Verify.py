@@ -30,7 +30,8 @@ phone = st.text_input("Mobile number", value=st.session_state.get("verify_phone"
 mobile_code = st.text_input("Mobile verification OTP", max_chars=6, type="password")
 if st.button("Verify Mobile", use_container_width=True):
     user = get_user_by_email(email)
-    if user and verify_otp(user["id"], "mobile_verification", mobile_code, "sms"):
+    phone_user = get_user_by_email(email) if phone.strip() == (user or {}).get("phone", "") else None
+    if user and phone_user and verify_otp(user["id"], "mobile_verification", mobile_code, "sms"):
         mark_mobile_verified(user["id"])
         st.session_state["mobile_verified"] = True
         st.success("Mobile number verified successfully.")
@@ -64,11 +65,25 @@ if email_done and mobile_done and user:
 if st.button("Resend codes", use_container_width=True):
     user = get_user_by_email(email)
     if user:
+        delivery_errors = []
         if not user["email_verified"]:
-            issue_otp(user["id"], "email_verification", "email", user["email"])
+            try:
+                issue_otp(user["id"], "email_verification", "email", user["email"])
+            except Exception as exc:
+                delivery_errors.append(f"Email: {exc}")
         if not user["mobile_verified"]:
-            issue_otp(user["id"], "mobile_verification", "sms", user["phone"])
-        st.info("Verification codes have been regenerated.")
+            try:
+                issue_otp(user["id"], "mobile_verification", "sms", user["phone"])
+            except Exception as exc:
+                delivery_errors.append(f"SMS: {exc}")
+        if delivery_errors:
+            st.error("Could not deliver all verification codes. " + " ".join(delivery_errors))
+        else:
+            st.success("Verification codes have been resent.")
+        if st.session_state.get("dev_otp_codes"):
+            st.warning("Development-only OTPs (never enable this in production):")
+            for purpose, details in st.session_state["dev_otp_codes"].items():
+                st.code(f"{purpose}: {details['code']}")
     else:
         st.info("Enter the email used during signup.")
 
