@@ -248,8 +248,13 @@ def configure_database(app):
     default_sqlite = os.path.join(base_dir, "instance", "atharvadrishti.db")
     os.makedirs(os.path.dirname(default_sqlite), exist_ok=True)
     database_url = os.getenv("DATABASE_URL", f"sqlite:///{default_sqlite}")
+    # Use the psycopg 3 driver already installed in requirements.txt.
+    # Neon provides postgresql:// URLs; SQLAlchemy needs the explicit driver
+    # because psycopg2 is not installed in this project.
     if database_url.startswith("postgres://"):
-        database_url = "postgresql://" + database_url[len("postgres://"):]
+        database_url = "postgresql+psycopg://" + database_url[len("postgres://"):]
+    elif database_url.startswith("postgresql://"):
+        database_url = "postgresql+psycopg://" + database_url[len("postgresql://"):]
 
     app.config.setdefault("SQLALCHEMY_DATABASE_URI", database_url)
     app.config.setdefault("SQLALCHEMY_TRACK_MODIFICATIONS", False)
