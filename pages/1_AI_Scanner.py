@@ -226,27 +226,52 @@ st.write("")
 # MODEL LOADING
 # ============================================================
 
-@st.cache_resource
-def load_ai_model():
-
-    model = load_model(
+MODEL_OPTIONS = {
+    "PlantDoc — General Classifier (38 classes)": (
         "models/plantdoc_model.keras",
+        "models/class_names.json",
+        "general",
+    ),
+    "FruitLeaf6 — Fruit & Leaf Classifier (24 classes)": (
+        "models/FruitLeaf6/fruitleaf6_model.keras",
+        "models/FruitLeaf6/fruitleaf6_class_names.json",
+        "fruitleaf6",
+    ),
+}
+
+selected_model_label = st.selectbox(
+    "Choose AI Model",
+    options=list(MODEL_OPTIONS.keys()),
+    index=0,
+    key="scanner_model_choice",
+)
+selected_model_path, selected_class_path, selected_model_key = MODEL_OPTIONS[selected_model_label]
+
+
+@st.cache_resource
+def load_ai_model(model_path, class_path):
+
+    selected_model = load_model(
+        model_path,
         compile=False
     )
 
-    with open("models/class_names.json", "r") as f:
-        class_names = json.load(f)
+    with open(class_path, "r", encoding="utf-8") as f:
+        selected_class_names = json.load(f)
 
-    return model, class_names
+    return selected_model, selected_class_names
 
 
 try:
 
-    model, class_names = load_ai_model()
+    model, class_names = load_ai_model(
+        selected_model_path,
+        selected_class_path
+    )
 
 except Exception as e:
 
-    st.error("❌ AI model could not be loaded.")
+    st.error("❌ The selected AI model could not be loaded.")
     st.error(str(e))
     st.stop()
 
@@ -338,9 +363,9 @@ def preprocess_image(image):
     return array
 
 
-def get_predictions(image_array):
+def get_predictions(image_array, selected_model):
 
-    predictions = model.predict(
+    predictions = selected_model.predict(
         image_array,
         verbose=0
     )[0]
@@ -394,7 +419,9 @@ def get_predictions(image_array):
 
 def generate_shap_heatmap(
     image_array,
-    predicted_index
+    predicted_index,
+    selected_model,
+    selected_class_names,
 ):
 
     try:
@@ -405,9 +432,9 @@ def generate_shap_heatmap(
         )
 
         explainer = shap.Explainer(
-            model,
+            selected_model,
             masker,
-            output_names=class_names
+            output_names=selected_class_names
         )
 
         shap_values = explainer(
@@ -794,59 +821,60 @@ image_array = preprocess_image(
 # LEAF / NON-LEAF VALIDATION
 # ============================================================
 
-try:
+if selected_model_key == "fruitleaf6":
+    # FruitLeaf6 contains fruit and leaf images, so do not apply the
+    # separate leaf-only detector to this model's inputs.
+    leaf_probability = None
+else:
+    try:
 
-    leaf_detector, leaf_detector_classes = load_leaf_detector()
+        leaf_detector, leaf_detector_classes = load_leaf_detector()
 
-    leaf_probability = get_leaf_probability(
-        image_array,
-        leaf_detector,
-        leaf_detector_classes
+        leaf_probability = get_leaf_probability(
+            image_array,
+            leaf_detector,
+            leaf_detector_classes
+        )
+
+    except Exception as detector_error:
+
+        st.error("❌ Leaf validation model could not be loaded.")
+        st.error(str(detector_error))
+        st.stop()
+
+    # Do not allow the leaf-only classifiers to run on non-leaf images.
+    if leaf_probability < LEAF_DETECTOR_THRESHOLD:
+
+        st.error(
+            "🚫 NOT A LEAF — ATHARVADRISHTI cannot analyze this image as a plant leaf."
+        )
+
+        st.warning(
+            f"Leaf detector confidence: {leaf_probability * 100:.2f}%. "
+            "Please capture or upload a clear photo containing a visible plant leaf."
+        )
+
+        st.markdown("### 📷 Try again with:")
+
+        tip1, tip2, tip3 = st.columns(3)
+
+        with tip1:
+            st.write("🌿 **A visible leaf**")
+            st.caption("Keep most of the leaf inside the frame.")
+
+        with tip2:
+            st.write("💡 **Good lighting**")
+            st.caption("Avoid very dark or blurry images.")
+
+        with tip3:
+            st.write("🎯 **Close framing**")
+            st.caption("Avoid objects, faces, buildings or full scenes.")
+
+        st.stop()
+
+    st.success(
+        f"✅ Leaf detected — confidence {leaf_probability * 100:.2f}%"
     )
-
-except Exception as detector_error:
-
-    st.error("❌ Leaf validation model could not be loaded.")
-    st.error(str(detector_error))
-    st.stop()
-
-
-# Do not allow the disease classifier to run on non-leaf images.
-if leaf_probability < LEAF_DETECTOR_THRESHOLD:
-
-    st.error(
-        f"🚫 NOT A LEAF — ATHARVADRISHTI cannot analyze this image as a plant leaf."
-    )
-
-    st.warning(
-        f"Leaf detector confidence: {leaf_probability * 100:.2f}%. "
-        "Please capture or upload a clear photo containing a visible plant leaf."
-    )
-
-    st.markdown(
-        "### 📷 Try again with:"
-    )
-
-    tip1, tip2, tip3 = st.columns(3)
-
-    with tip1:
-        st.write("🌿 **A visible leaf**")
-        st.caption("Keep most of the leaf inside the frame.")
-
-    with tip2:
-        st.write("💡 **Good lighting**")
-        st.caption("Avoid very dark or blurry images.")
-
-    with tip3:
-        st.write("🎯 **Close framing**")
-        st.caption("Avoid objects, faces, buildings or full scenes.")
-
-    st.stop()
-
-
-st.success(
-    f"✅ Leaf detected — confidence {leaf_probability * 100:.2f}%"
-)
 
 
 # ============================================================
@@ -858,7 +886,8 @@ with st.spinner(
 ):
 
     predictions, top_indices = get_predictions(
-        image_array
+        image_array,
+        model
     )
 
 
@@ -949,7 +978,7 @@ with info_col2:
             "Original Size": f"{width} × {height} px",
             "Model Input Size": "224 × 224 px",
             "Image Type": "RGB Leaf Image",
-            "Leaf Detector": f"{leaf_probability * 100:.2f}% leaf",
+            "Leaf Detector": (f"{leaf_probability * 100:.2f}% leaf" if leaf_probability is not None else "Not applied — fruit/leaf model"),
             "Analysis": "Plant Health Analysis"
         }
 
@@ -1213,7 +1242,9 @@ with st.spinner(
 
     shap_image = generate_shap_heatmap(
         image_array,
-        predicted_index
+        predicted_index,
+        model,
+        class_names,
     )
 
 

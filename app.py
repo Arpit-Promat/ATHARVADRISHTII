@@ -1,6 +1,8 @@
 import os
 import json
 import uuid
+from functools import lru_cache
+
 import numpy as np
 
 from flask import Flask, jsonify, render_template, request
@@ -54,7 +56,23 @@ with open(LEAF_DETECTOR_CLASSES_PATH, encoding="utf-8") as f:
 
 LEAF_INDEX = leaf_detector_class_indices.get("leaf", 0)
 LEAF_DETECTOR_THRESHOLD = 0.5
-ALLOWED_PLANT_TYPES = {"general", "mango"}
+ALLOWED_PLANT_TYPES = {"general", "mango", "fruitleaf6"}
+
+
+@lru_cache(maxsize=None)
+def load_registered_model_and_classes(model_key):
+    """Load an additional registered classifier only when it is selected."""
+    spec = get_model_spec(model_key)
+    model_path = os.path.join(BASE_DIR, spec.model_path)
+    class_path = os.path.join(BASE_DIR, spec.class_names_path)
+
+    with timed_event("model_load", model=model_identifier(model_key)):
+        selected_model = load_model(model_path, compile=False)
+
+    with open(class_path, encoding="utf-8") as class_file:
+        selected_class_names = json.load(class_file)
+
+    return selected_model, selected_class_names
 
 
 @app.get("/landing")
@@ -102,18 +120,20 @@ def system_models():
             "display_name": get_model_spec(key).display_name,
             "identifier": model_identifier(key),
         }
-        for key in ("general", "mango", "leaf_detector")
+        for key in ("general", "mango", "leaf_detector", "fruitleaf6")
     })
 
 
 def get_model_and_classes(plant_type):
     if plant_type == "mango":
         return mango_model, mango_class_names
+    if plant_type == "fruitleaf6":
+        return load_registered_model_and_classes("fruitleaf6")
     return general_model, general_class_names
 
 
 def get_model_key(plant_type):
-    return "mango" if plant_type == "mango" else "general"
+    return plant_type if plant_type in {"mango", "fruitleaf6"} else "general"
 
 
 def is_leaf_image(input_image_array):
@@ -218,8 +238,15 @@ def index():
                     arr = image.img_to_array(img) / 255.0
                     input_image = np.expand_dims(arr, axis=0)
 
-                    is_leaf, leaf_probability_value = is_leaf_image(input_image)
-                    leaf_probability = round(float(leaf_probability_value) * 100, 2)
+                    # FruitLeaf6 includes fruit as well as leaf classes, so it
+                    # must not be blocked by the leaf-only image detector.
+                    if selected_plant_type == "fruitleaf6":
+                        is_leaf = True
+                        leaf_probability = None
+                    else:
+                        is_leaf, leaf_probability_value = is_leaf_image(input_image)
+                        leaf_probability = round(float(leaf_probability_value) * 100, 2)
+
                     if not is_leaf:
                         log_event("prediction.rejected", reason="not_leaf")
                         print("Rejected by leaf detector — not a leaf image.")

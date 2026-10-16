@@ -34,6 +34,13 @@ MODEL_REGISTRY = {
         model_path="models/leaf_detector_model.keras",
         class_names_path="models/leaf_detector_classes.json",
     ),
+    "fruitleaf6": ModelSpec(
+        key="fruitleaf6",
+        display_name="FruitLeaf6 Fruit and Leaf Classifier",
+        version="1.0.0",
+        model_path="models/FruitLeaf6/fruitleaf6_model.keras",
+        class_names_path="models/FruitLeaf6/fruitleaf6_class_names.json",
+    ),
 }
 
 

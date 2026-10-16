@@ -83,10 +83,11 @@ body{font-family:Inter,system-ui,sans-serif;background:radial-gradient(circle at
 <section class="upload-card">
 <form action="/" method="POST" enctype="multipart/form-data">
 <div style="margin-bottom:18px">
-<label for="plantType" style="font-weight:700;display:block;margin-bottom:8px">Select Plant Type</label>
+<label for="plantType" style="font-weight:700;display:block;margin-bottom:8px">Select AI Model</label>
 <select id="plantType" name="plant_type" class="plant-select">
-<option value="general" {% if selected_plant_type == "general" %}selected{% endif %}>General (Apple, Tomato, Corn, etc.)</option>
-<option value="mango" {% if selected_plant_type == "mango" %}selected{% endif %}>Mango</option>
+<option value="general" {% if selected_plant_type == "general" %}selected{% endif %}>PlantDoc — General Classifier (38 classes)</option>
+<option value="mango" {% if selected_plant_type == "mango" %}selected{% endif %}>Mango Disease Classifier</option>
+<option value="fruitleaf6" {% if selected_plant_type == "fruitleaf6" %}selected{% endif %}>FruitLeaf6 — Fruit &amp; Leaf Classifier (24 classes)</option>
 </select>
 </div>
 <label class="drop-zone" id="dropZone" for="imageInput">
