@@ -38,15 +38,24 @@ def database_url() -> str:
     return _secret("DATABASE_URL")
 
 
+def _normalized_database_url() -> str:
+    """Normalize Neon/PostgreSQL URLs for psycopg (also accepts SQLAlchemy-style URLs)."""
+    url = database_url()
+    if url.startswith("postgresql+psycopg://"):
+        url = "postgresql://" + url[len("postgresql+psycopg://"):]
+    elif url.startswith("postgres://"):
+        url = "postgresql://" + url[len("postgres://"):]
+    return url
+
+
 def _is_postgres() -> bool:
-    url = database_url().lower()
-    return url.startswith("postgres://") or url.startswith("postgresql://")
+    return _normalized_database_url().lower().startswith("postgresql://")
 
 
 def _connect():
     if _is_postgres():
         import psycopg
-        return psycopg.connect(database_url())
+        return psycopg.connect(_normalized_database_url())
     db_path = Path(_secret("SQLITE_PATH", "instance/streamlit_auth.db"))
     db_path.parent.mkdir(parents=True, exist_ok=True)
     return sqlite3.connect(str(db_path), check_same_thread=False)
@@ -230,8 +239,10 @@ def _make_otp() -> str:
 def _deliver_email(destination: str, subject: str, body: str) -> None:
     host = _secret("SMTP_HOST")
     if not host:
-        print(f"ATHARVADRISHTI EMAIL DEV FALLBACK -> {destination}: {body}")
-        return
+        if _secret("AUTH_DEV_SHOW_OTP", "0") == "1":
+            print(f"ATHARVADRISHTI EMAIL DEV FALLBACK -> {destination}: {body}")
+            return
+        raise RuntimeError("Email verification is not configured. Add SMTP_HOST, SMTP_USERNAME, SMTP_PASSWORD, and EMAIL_FROM to Streamlit Secrets.")
     port = int(_secret("SMTP_PORT", "587"))
     username = _secret("SMTP_USERNAME")
     password = _secret("SMTP_PASSWORD")
@@ -254,8 +265,10 @@ def _deliver_sms(destination: str, body: str) -> None:
     token = _secret("TWILIO_AUTH_TOKEN")
     from_number = _secret("TWILIO_FROM_NUMBER")
     if not (sid and token and from_number):
-        print(f"ATHARVADRISHTI SMS DEV FALLBACK -> {destination}: {body}")
-        return
+        if _secret("AUTH_DEV_SHOW_OTP", "0") == "1":
+            print(f"ATHARVADRISHTI SMS DEV FALLBACK -> {destination}: {body}")
+            return
+        raise RuntimeError("SMS verification is not configured. Add TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_FROM_NUMBER to Streamlit Secrets.")
     from twilio.rest import Client
     Client(sid, token).messages.create(body=body, from_=from_number, to=destination)
 
@@ -289,6 +302,9 @@ def issue_otp(user_id: int, purpose: str, channel: str, destination: str) -> str
     else:
         _deliver_sms(destination, body)
     if _secret("AUTH_DEV_SHOW_OTP", "0") == "1":
+        codes = dict(st.session_state.get("dev_otp_codes", {}))
+        codes[purpose] = {"channel": channel, "destination": destination, "code": code}
+        st.session_state["dev_otp_codes"] = codes
         st.session_state["dev_last_otp"] = code
     return code
 
