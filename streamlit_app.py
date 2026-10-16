@@ -145,19 +145,88 @@ div[data-testid="stTextInput"] label {{color:var(--muted) !important}}
 .green-band p {{margin:0;color:#bdd4c2;font-size:11px}}
 .footer {{text-align:center;padding:18px 0 8px;color:var(--muted);font-size:9px}}
 
+/* Responsive foundations */
+*, *::before, *::after {{box-sizing:border-box}}
+img, svg, video {{max-width:100%;height:auto}}
+.block-container {{width:100%;overflow-x:clip}}
+[data-testid="stMarkdownContainer"] {{overflow-wrap:anywhere}}
+.hero-title {{font-size:clamp(2.65rem, 6vw, 5.25rem);line-height:.98;overflow-wrap:normal}}
+.hero-text {{font-size:clamp(1rem, 1.35vw, 1.08rem)}}
+.hero-art {{min-height:clamp(340px, 38vw, 492px);width:100%}}
+.phone {{width:clamp(190px, 20vw, 252px);height:clamp(340px, 36vw, 448px);max-width:78%}}
+.phone-screen {{font-size:clamp(5rem, 8vw, 7.1rem)}}
+.disease-chip {{font-size:clamp(9px, .8vw, 11px)}}
+.floating {{max-width:42%;white-space:normal;text-align:center}}
+.feature-card {{height:100%;min-width:0;overflow-wrap:anywhere}}
+.feature-card h3 {{overflow-wrap:anywhere}}
+.login-shell {{width:100%;min-width:0}}
+input, button {{max-width:100%}}
+
+@media(max-width:1100px){{
+    .block-container{{padding-left:1.5rem !important;padding-right:1.5rem !important}}
+    .brand-sub{{letter-spacing:.08em;font-size:8px}}
+    .brand-title{{font-size:15px;letter-spacing:.08em}}
+    .hero-copy{{padding:35px 0 30px}}
+    .hero-art{{margin-top:20px;border-radius:30px}}
+    .feature-strip{{padding:25px 12px}}
+    .security-section{{padding:60px 0 50px}}
+    .security-section h2{{font-size:clamp(2rem,4.4vw,2.9rem)}}
+}}
 @media(max-width:900px){{
     .block-container{{padding-top:4rem !important}}
-    .hero-copy{{padding-top:40px}}
-    .hero-art{{min-height:420px;margin-top:20px}}
+    .hero-copy{{padding-top:28px}}
+    .hero-art{{min-height:390px;margin-top:8px}}
     .feature-card{{border-right:0;border-bottom:1px solid var(--line);padding:15px 8px}}
     .feature-card:last-child{{border-bottom:0}}
+    .feature-card h3{{font-size:14px}}
+    .feature-card p{{font-size:12px}}
+    .step{{min-height:140px}}
+    .green-band{{margin-left:-1.5rem;margin-right:-1.5rem;padding-left:1.5rem;padding-right:1.5rem}}
 }}
-@media(max-width:600px){{
-    .block-container{{padding-left:1rem !important;padding-right:1rem !important;padding-top:3.6rem !important}}
-    .hero-title{{font-size:50px}}
-    .phone{{transform:scale(.86)}}
-    .hero-art{{min-height:360px;border-radius:27px}}
-    .green-band{{margin:0 -1rem}}
+@media(max-width:700px){{
+    .block-container{{padding-left:1rem !important;padding-right:1rem !important;padding-top:3.25rem !important}}
+    .header-shell{{padding:10px;border-radius:15px}}
+    .brand-wrap{{gap:8px;align-items:center}}
+    .brand-mark{{width:38px;height:38px;flex:0 0 38px;font-size:20px}}
+    .brand-title{{font-size:14px;letter-spacing:.07em}}
+    .brand-sub{{font-size:7px;line-height:1.45;letter-spacing:.05em;max-width:250px}}
+    [data-testid="stHorizontalBlock"]:has(.nav-row-anchor){{display:flex !important;flex-wrap:wrap !important;gap:8px !important}}
+    [data-testid="stHorizontalBlock"]:has(.nav-row-anchor) > [data-testid="column"]{{flex:1 1 calc(33.333% - 8px) !important;min-width:0 !important;width:auto !important}}
+    [data-testid="stHorizontalBlock"]:has(.nav-row-anchor) > [data-testid="column"]:first-child{{flex:1 1 100% !important}}
+    [data-testid="stHorizontalBlock"]:has(.nav-row-anchor) button{{min-height:42px !important;font-size:12px !important;padding:0 6px !important;white-space:normal !important}}
+    .hero-copy{{padding:28px 0 20px}}
+    .eyebrow{{font-size:9px;line-height:1.5;white-space:normal}}
+    .hero-title{{font-size:clamp(2.55rem, 10.5vw, 4rem);letter-spacing:-.055em;line-height:.98;margin:16px 0}}
+    .hero-text{{font-size:15px;line-height:1.7}}
+    .mini-feature{{font-size:11px;gap:6px}}
+    .mini-feature b{{font-size:18px}}
+    .hero-art{{min-height:340px;margin-top:0;border-radius:24px}}
+    .phone{{width:190px;height:330px;padding:6px;border-width:6px;border-radius:32px}}
+    .phone-screen{{border-radius:24px;font-size:82px}}
+    .scan-box{{inset:48px 20px;border-radius:17px}}
+    .disease-chip{{left:10px;right:10px;bottom:12px;padding:9px;font-size:9px}}
+    .floating{{padding:8px 9px;font-size:9px;max-width:38%}}
+    .floating.a{{top:18px;right:12px}}
+    .floating.b{{left:12px;bottom:26px}}
+    .login-shell{{margin-top:22px;padding:18px;border-radius:18px}}
+    .login-title{{font-size:25px}}
+    .feature-strip{{margin-top:24px;padding:18px 10px}}
+    .feature-card{{min-height:0;padding:16px 10px}}
+    .security-section{{padding:45px 0 35px}}
+    .security-section h2{{font-size:clamp(1.9rem, 8vw, 2.5rem);line-height:1.05}}
+    .step{{min-height:0;padding:16px}}
+    .green-band{{margin:0 -1rem;padding:30px 1rem}}
+    .green-band h2{{font-size:clamp(1.5rem,6vw,1.9rem)}}
+}}
+@media(max-width:420px){{
+    .block-container{{padding-left:.75rem !important;padding-right:.75rem !important}}
+    .brand-sub{{max-width:205px}}
+    .hero-title{{font-size:clamp(2.25rem, 10vw, 2.8rem)}}
+    .hero-art{{min-height:300px}}
+    .phone{{transform:scale(.88)}}
+    .floating.b{{bottom:15px}}
+    .green-band{{margin:0 -.75rem;padding-left:.75rem;padding-right:.75rem}}
+    .login-shell{{padding:15px}}
 }}
 </style>
 """,
@@ -172,11 +241,10 @@ st.markdown('<div style="height:12px"></div>', unsafe_allow_html=True)
 # -----------------------------------------------------------------------------
 nav = st.container()
 with nav:
-    st.markdown('<div class="header-shell">', unsafe_allow_html=True)
     n1, n2, n3, n4, n5, n6 = st.columns([3.0, .9, 1.0, 1.0, 1.2, 1.0], gap="small")
     with n1:
         st.markdown(
-            '<div class="brand-wrap"><div class="brand-mark">🌿</div><div><div class="brand-title">ATHARVADRISHTI</div><div class="brand-sub">AN INTELLIGENT AND EXPLAINABLE PLANT HEALTH ANALYSIS SYSTEM</div></div></div>',
+            '<div class="brand-wrap"><span class="nav-row-anchor"></span><div class="brand-mark">🌿</div><div><div class="brand-title">ATHARVADRISHTI</div><div class="brand-sub">AN INTELLIGENT AND EXPLAINABLE PLANT HEALTH ANALYSIS SYSTEM</div></div></div>',
             unsafe_allow_html=True,
         )
     with n2:
@@ -199,7 +267,6 @@ with nav:
         if st.button(mode_label, use_container_width=True, key="nav_theme"):
             st.session_state["landing_theme"] = "dark" if not is_dark else "light"
             st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
 
 # -----------------------------------------------------------------------------
 # HERO
