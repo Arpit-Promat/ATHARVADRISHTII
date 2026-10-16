@@ -31,13 +31,26 @@ if submitted:
         if error:
             st.error(error)
         else:
-            issue_otp(user["id"], "email_verification", "email", user["email"])
-            issue_otp(user["id"], "mobile_verification", "sms", user["phone"])
             st.session_state["verify_email"] = user["email"]
             st.session_state["verify_phone"] = user["phone"]
-            st.success("Account created. Verification codes have been generated.")
-            if st.session_state.get("dev_last_otp"):
-                st.info("Development OTP mode is enabled; check the latest generated code in the app log or secret-controlled demo flow.")
+            delivery_errors = []
+            for purpose, channel, destination, label in (
+                ("email_verification", "email", user["email"], "Email"),
+                ("mobile_verification", "sms", user["phone"], "SMS"),
+            ):
+                try:
+                    issue_otp(user["id"], purpose, channel, destination)
+                except Exception as exc:
+                    delivery_errors.append(f"{label}: {exc}")
+            if delivery_errors:
+                st.error("Your account was created, but verification delivery needs configuration: " + " ".join(delivery_errors))
+                st.info("Configure the email/SMS provider in Streamlit Secrets, then use Resend codes on the Verify page.")
+            else:
+                st.success("Account created. Verification codes were sent.")
+            if st.session_state.get("dev_otp_codes"):
+                st.warning("Development-only OTPs (never enable this in production):")
+                for purpose, details in st.session_state["dev_otp_codes"].items():
+                    st.code(f"{purpose}: {details['code']}")
             st.switch_page("pages/3_Verify.py")
 
 if st.button("Back to home", use_container_width=True):
