@@ -1,6 +1,6 @@
 # Integrating Wheat, Paddy/Rice, and Sugarcane datasets
 
-This repository update adds a safe inspection script for the three locally extracted datasets. It does **not** add trained crop models yet.
+This repository includes a safe inspection script and a local training script for Wheat disease and Rice pest classifiers. The trained models are **not** part of the repository yet; you must train them locally using your extracted datasets.
 
 ## Why training is not included yet
 
@@ -18,14 +18,49 @@ python scripts/inspect_crop_datasets.py
 
 When prompted, paste the full path to each extracted Wheat, Paddy/Rice, and Sugarcane folder. The script only reads the folders and reports image counts by subfolder; it does not modify or upload any data.
 
-## Next steps after inspection
+## Train the Wheat classifier
 
-1. Review the class names and counts printed by the script.
-2. Confirm that each disease class has labelled images. Keep the Sugarcane healthy-only dataset separate until diseased classes are obtained.
-3. Create a reproducible train/validation split only if the source dataset does not already include one.
-4. Train and evaluate crop-specific models; do not treat validation accuracy as test accuracy.
-5. Add each verified model and its class-name JSON to `model_registry.py` only after the model artifact exists and the scanner has been tested against it.
-6. Commit code and small configuration/label files. Do not commit the raw 3 GB dataset to GitHub. Large model artifacts should use an approved artifact store or Git LFS when appropriate.
+First pull the latest repository code:
+
+```powershell
+git pull origin main
+```
+
+Train only Wheat first:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\train_crop_models.py --model wheat
+```
+
+When prompted, enter the extracted root folder, for example `C:\Users\Dell\Downloads\Crop Dataset`. The script selects the Wheat Healthy, Septoria, and Stripe Rust folders and ignores the Tomato classes. It uses the source train folders, makes a validation split, and evaluates on matching Wheat test folders when available.
+
+The output files should be:
+
+- `models/wheat_model.keras`
+- `models/wheat_class_names.json`
+
+## Train the Rice pest classifier
+
+After Wheat training completes, run:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\train_crop_models.py --model rice-pest
+```
+
+When prompted, enter your extracted `Pest_V2` folder, for example `C:\Users\Dell\Downloads\Pest_V2`. The script groups nested adult/egg/larva folders under each top-level pest name, so the model predicts the pest category rather than the life stage.
+
+The output files should be:
+
+- `models/rice_pest_model.keras`
+- `models/rice_pest_class_names.json`
+
+The script uses MobileNetV2 pretrained weights, so the first run may need internet access to download those weights. It trains locally and does not upload your dataset. Check the validation metrics and the separate Wheat test result before using either model.
+
+## Before app integration
+
+Do not change `model_registry.py` or the deployed app yet. First confirm both local training runs finish and that the four output files above exist. Then the model loading and Streamlit interface can be integrated and tested.
+
+Keep the Sugarcane healthy-only dataset separate until labelled diseased classes are obtained. Do not commit the raw 3 GB dataset to GitHub; large model artifacts should use an approved artifact store or Git LFS when appropriate.
 
 ## Resource guidance
 
