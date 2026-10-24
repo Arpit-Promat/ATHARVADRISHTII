@@ -205,9 +205,9 @@ def build_model(class_count: int) -> tf.keras.Model:
     x = tf.keras.layers.RandomFlip("horizontal")(inputs)
     x = tf.keras.layers.RandomRotation(0.08)(x)
     x = tf.keras.layers.RandomZoom(0.10)(x)
-    x = tf.keras.layers.Lambda(
-        tf.keras.applications.mobilenet_v2.preprocess_input, name="mobilenet_preprocess"
-    )(x)
+    # Equivalent to MobileNetV2 preprocess_input for RGB pixels in [0, 255],
+    # implemented as a standard layer for safer .keras serialization.
+    x = tf.keras.layers.Rescaling(1.0 / 127.5, offset=-1, name="mobilenet_preprocess")(x)
     base = tf.keras.applications.MobileNetV2(
         input_shape=(*IMAGE_SIZE, 3), include_top=False, weights="imagenet"
     )
