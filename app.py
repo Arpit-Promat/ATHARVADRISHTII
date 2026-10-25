@@ -56,7 +56,7 @@ with open(LEAF_DETECTOR_CLASSES_PATH, encoding="utf-8") as f:
 
 LEAF_INDEX = leaf_detector_class_indices.get("leaf", 0)
 LEAF_DETECTOR_THRESHOLD = 0.5
-ALLOWED_PLANT_TYPES = {"general", "mango", "fruitleaf6"}
+ALLOWED_PLANT_TYPES = {"general", "mango", "fruitleaf6", "wheat", "rice-pest", "sugarcane"}
 
 
 @lru_cache(maxsize=None)
@@ -124,16 +124,32 @@ def system_models():
     })
 
 
+@lru_cache(maxsize=1)
+def load_sugarcane_model_and_threshold():
+    model_path = os.path.join(BASE_DIR, "models", "sugarcane_healthy_autoencoder.keras")
+    threshold_path = os.path.join(BASE_DIR, "models", "sugarcane_healthy_threshold.json")
+    with timed_event("model_load", model="sugarcane_healthy@1.0.0"):
+        model = load_model(model_path, compile=False)
+    with open(threshold_path, encoding="utf-8") as f:
+        metadata = json.load(f)
+    return model, float(metadata["reconstruction_error_threshold"]), int(metadata.get("image_size", [160, 160])[0])
+
+
 def get_model_and_classes(plant_type):
     if plant_type == "mango":
         return mango_model, mango_class_names
     if plant_type == "fruitleaf6":
         return load_registered_model_and_classes("fruitleaf6")
+    if plant_type in {"wheat", "rice-pest"}:
+        key = "rice_pest" if plant_type == "rice-pest" else "wheat"
+        return load_registered_model_and_classes(key)
     return general_model, general_class_names
 
 
 def get_model_key(plant_type):
-    return plant_type if plant_type in {"mango", "fruitleaf6"} else "general"
+    if plant_type == "rice-pest":
+        return "rice_pest"
+    return plant_type if plant_type in {"mango", "fruitleaf6", "wheat"} else "general"
 
 
 def is_leaf_image(input_image_array):
@@ -205,6 +221,7 @@ def index():
     top_predictions = []
     prediction_margin = None
     leaf_probability = None
+    anomaly_error = None
     selected_plant_type = "general"
 
     if request.method == "POST":
@@ -222,8 +239,13 @@ def index():
                 error = validation_result
             else:
                 try:
-                    model, class_names = get_model_and_classes(selected_plant_type)
-                    model_key = get_model_key(selected_plant_type)
+                    if selected_plant_type == "sugarcane":
+                        model, anomaly_threshold, anomaly_size = load_sugarcane_model_and_threshold()
+                        class_names = []
+                        model_key = "sugarcane_healthy"
+                    else:
+                        model, class_names = get_model_and_classes(selected_plant_type)
+                        model_key = get_model_key(selected_plant_type)
                     upload_folder = os.path.join(BASE_DIR, "static", "uploads")
                     os.makedirs(upload_folder, exist_ok=True)
 
@@ -234,13 +256,20 @@ def index():
 
                     file.seek(0)
                     file.save(original_path)
-                    img = image.load_img(original_path, target_size=(224, 224))
-                    arr = image.img_to_array(img) / 255.0
-                    input_image = np.expand_dims(arr, axis=0)
+                    if selected_plant_type == "sugarcane":
+                        img = image.load_img(original_path, target_size=(anomaly_size, anomaly_size))
+                        arr = image.img_to_array(img) / 255.0
+                        input_image = np.expand_dims(arr.astype(np.float32), axis=0)
+                    else:
+                        img = image.load_img(original_path, target_size=(224, 224))
+                        arr = image.img_to_array(img) / 255.0
+                        input_image = np.expand_dims(arr, axis=0)
+                    if selected_plant_type in {"wheat", "rice-pest"}:
+                        input_image = input_image * 255.0
 
                     # FruitLeaf6 includes fruit as well as leaf classes, so it
                     # must not be blocked by the leaf-only image detector.
-                    if selected_plant_type == "fruitleaf6":
+                    if selected_plant_type in {"fruitleaf6", "sugarcane", "wheat", "rice-pest"}:
                         is_leaf = True
                         leaf_probability = None
                     else:
@@ -253,53 +282,71 @@ def index():
                         error = "This doesn't look like a leaf. Please upload a clear photo of a plant leaf."
                     else:
                         original_image = f"/static/uploads/{unique_name}"
-                        with timed_event("prediction", model=model_identifier(model_key), plant_type=selected_plant_type):
-                            raw_pred = model.predict(input_image, verbose=0)[0]
-                            result = assess_prediction(raw_pred, class_names, model_key, top_k=3)
-                        idx = result["predicted_index"]
-                        prediction = result["prediction"]
-                        confidence = result["confidence"]
-                        prediction_margin = result["margin"]
-                        top_predictions = result["top_predictions"]
+                        if selected_plant_type == "sugarcane":
+                            reconstructed = model.predict(input_image, verbose=0)
+                            anomaly_error = float(np.mean(np.square(input_image - reconstructed)))
+                            prediction = ("Image resembles healthy sugarcane leaves" if anomaly_error <= anomaly_threshold else "Unusual image — review recommended")
+                            confidence = None
+                            prediction_margin = None
+                            top_predictions = []
+                            confidence_level = None
+                            confidence_label = "Healthy-image similarity check"
+                            original_image = f"/static/uploads/{unique_name}"
+                            ai_explanation = [
+                                f"Reconstruction error: {anomaly_error:.6f} (healthy-image threshold: {anomaly_threshold:.6f}).",
+                                "This model learns the appearance of healthy sugarcane leaves; it does not identify disease names.",
+                                "If visible symptoms concern you, consult an agricultural expert even if the image appears similar to healthy leaves.",
+                            ]
+                            log_event("prediction.completed", model=model_key, plant_type=selected_plant_type, anomaly_error=round(anomaly_error, 6))
+                        else:
+                            with timed_event("prediction", model=model_identifier(model_key), plant_type=selected_plant_type):
+                                raw_pred = model.predict(input_image, verbose=0)[0]
+                                result = assess_prediction(raw_pred, class_names, model_key, top_k=3)
+                            idx = result["predicted_index"]
+                            prediction = result["prediction"]
+                            confidence = result["confidence"]
+                            prediction_margin = result["margin"]
+                            top_predictions = result["top_predictions"]
 
                         if selected_plant_type != "sugarcane":
+                            if selected_plant_type != "sugarcane":
                             print(f"Plant type: {selected_plant_type}")
-                            print(f"Model: {result['model_version']}")
-                            print(f"Prediction: {prediction}")
-                            print(f"Confidence: {confidence}%")
-                            print(f"Margin (top1 - top2): {prediction_margin}%")
-    
-                            if not result["accepted"]:
-                                log_event(
-                                    "prediction.rejected",
-                                    reason="low_confidence_or_margin",
-                                    model=result["model_version"],
-                                    confidence=confidence,
-                                    margin=prediction_margin,
-                                )
-                                print("Rejected — confidence or margin below threshold.")
-                                error = "The image is unclear, or the disease could not be identified confidently. Please upload a clearer photo of the leaf."
-                                prediction = None
-                                confidence = None
-                                original_image = None
-                            else:
-                                log_event(
-                                    "prediction.accepted",
-                                    model=result["model_version"],
-                                    prediction=prediction,
-                                    confidence=confidence,
-                                    margin=prediction_margin,
-                                )
-                                confidence_level = result["confidence_level"]
-                                confidence_label = result["confidence_label"]
-                                ai_explanation = [
-                                    f"The model predicted {prediction} as the most likely class.",
-                                    f"The model assigned a confidence score of {confidence}%, indicating strong classification confidence.",
-                                    "SHAP highlights the image regions that contributed most to the model's prediction.",
-                                    "The highlighted regions help identify which visible leaf features influenced the classification.",
-                                    "This explanation improves model transparency by showing why the AI reached its prediction instead of only giving the final disease name.",
-                                ]
-                                shap_image = generate_shap(model, class_names, input_image, idx)
+                                print(f"Model: {result['model_version']}")
+                                print(f"Prediction: {prediction}")
+                                print(f"Confidence: {confidence}%")
+                                print(f"Margin (top1 - top2): {prediction_margin}%")
+        
+                                if not result["accepted"]:
+                                    log_event(
+                                        "prediction.rejected",
+                                        reason="low_confidence_or_margin",
+                                        model=result["model_version"],
+                                        confidence=confidence,
+                                        margin=prediction_margin,
+                                    )
+                                    print("Rejected — confidence or margin below threshold.")
+                                    error = "The image is unclear, or the disease could not be identified confidently. Please upload a clearer photo of the leaf."
+                                    prediction = None
+                                    confidence = None
+                                    original_image = None
+                                else:
+                                    log_event(
+                                        "prediction.accepted",
+                                        model=result["model_version"],
+                                        prediction=prediction,
+                                        confidence=confidence,
+                                        margin=prediction_margin,
+                                    )
+                                    confidence_level = result["confidence_level"]
+                                    confidence_label = result["confidence_label"]
+                                    ai_explanation = [
+                                        f"The model predicted {prediction} as the most likely class.",
+                                        f"The model assigned a confidence score of {confidence}%, indicating strong classification confidence.",
+                                        "SHAP highlights the image regions that contributed most to the model's prediction.",
+                                        "The highlighted regions help identify which visible leaf features influenced the classification.",
+                                        "This explanation improves model transparency by showing why the AI reached its prediction instead of only giving the final disease name.",
+                                    ]
+                                    shap_image = generate_shap(model, class_names, input_image, idx)
 
                 except Exception as exc:
                     log_event("prediction.error", error_type=type(exc).__name__)
