@@ -262,43 +262,44 @@ def index():
                         prediction_margin = result["margin"]
                         top_predictions = result["top_predictions"]
 
-                        print(f"Plant type: {selected_plant_type}")
-                        print(f"Model: {result['model_version']}")
-                        print(f"Prediction: {prediction}")
-                        print(f"Confidence: {confidence}%")
-                        print(f"Margin (top1 - top2): {prediction_margin}%")
-
-                        if not result["accepted"]:
-                            log_event(
-                                "prediction.rejected",
-                                reason="low_confidence_or_margin",
-                                model=result["model_version"],
-                                confidence=confidence,
-                                margin=prediction_margin,
-                            )
-                            print("Rejected — confidence or margin below threshold.")
-                            error = "The image is unclear, or the disease could not be identified confidently. Please upload a clearer photo of the leaf."
-                            prediction = None
-                            confidence = None
-                            original_image = None
-                        else:
-                            log_event(
-                                "prediction.accepted",
-                                model=result["model_version"],
-                                prediction=prediction,
-                                confidence=confidence,
-                                margin=prediction_margin,
-                            )
-                            confidence_level = result["confidence_level"]
-                            confidence_label = result["confidence_label"]
-                            ai_explanation = [
-                                f"The model predicted {prediction} as the most likely class.",
-                                f"The model assigned a confidence score of {confidence}%, indicating strong classification confidence.",
-                                "SHAP highlights the image regions that contributed most to the model's prediction.",
-                                "The highlighted regions help identify which visible leaf features influenced the classification.",
-                                "This explanation improves model transparency by showing why the AI reached its prediction instead of only giving the final disease name.",
-                            ]
-                            shap_image = generate_shap(model, class_names, input_image, idx)
+                        if selected_plant_type != "sugarcane":
+                            print(f"Plant type: {selected_plant_type}")
+                            print(f"Model: {result['model_version']}")
+                            print(f"Prediction: {prediction}")
+                            print(f"Confidence: {confidence}%")
+                            print(f"Margin (top1 - top2): {prediction_margin}%")
+    
+                            if not result["accepted"]:
+                                log_event(
+                                    "prediction.rejected",
+                                    reason="low_confidence_or_margin",
+                                    model=result["model_version"],
+                                    confidence=confidence,
+                                    margin=prediction_margin,
+                                )
+                                print("Rejected — confidence or margin below threshold.")
+                                error = "The image is unclear, or the disease could not be identified confidently. Please upload a clearer photo of the leaf."
+                                prediction = None
+                                confidence = None
+                                original_image = None
+                            else:
+                                log_event(
+                                    "prediction.accepted",
+                                    model=result["model_version"],
+                                    prediction=prediction,
+                                    confidence=confidence,
+                                    margin=prediction_margin,
+                                )
+                                confidence_level = result["confidence_level"]
+                                confidence_label = result["confidence_label"]
+                                ai_explanation = [
+                                    f"The model predicted {prediction} as the most likely class.",
+                                    f"The model assigned a confidence score of {confidence}%, indicating strong classification confidence.",
+                                    "SHAP highlights the image regions that contributed most to the model's prediction.",
+                                    "The highlighted regions help identify which visible leaf features influenced the classification.",
+                                    "This explanation improves model transparency by showing why the AI reached its prediction instead of only giving the final disease name.",
+                                ]
+                                shap_image = generate_shap(model, class_names, input_image, idx)
 
                 except Exception as exc:
                     log_event("prediction.error", error_type=type(exc).__name__)
