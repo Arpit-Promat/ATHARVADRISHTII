@@ -142,9 +142,14 @@ def _protected(view):
 def register_product_auth_features(app):
     app.jinja_env.globals["auth_product_version"] = "1.0"
 
-    @app.get("/landing")
-    def landing_page():
-        return render_template("landing.html")
+    # app.py already registers /landing; don't register the same URL twice.
+    if not any(rule.rule == "/landing" for rule in app.url_map.iter_rules()):
+        app.add_url_rule(
+            "/landing",
+            endpoint="product_auth_landing_page",
+            view_func=lambda: render_template("landing.html"),
+            methods=["GET"],
+        )
 
     @app.get("/login")
     def login_page():
