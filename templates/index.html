@@ -88,6 +88,9 @@ body{font-family:Inter,system-ui,sans-serif;background:radial-gradient(circle at
 <option value="general" {% if selected_plant_type == "general" %}selected{% endif %}>PlantDoc — General Classifier (38 classes)</option>
 <option value="mango" {% if selected_plant_type == "mango" %}selected{% endif %}>Mango Disease Classifier</option>
 <option value="fruitleaf6" {% if selected_plant_type == "fruitleaf6" %}selected{% endif %}>FruitLeaf6 — Fruit &amp; Leaf Classifier (24 classes)</option>
+<option value="wheat" {% if selected_plant_type == "wheat" %}selected{% endif %}>Wheat Disease Classifier (3 classes)</option>
+<option value="rice-pest" {% if selected_plant_type == "rice-pest" %}selected{% endif %}>Rice Pest Classifier (10 classes)</option>
+<option value="sugarcane" {% if selected_plant_type == "sugarcane" %}selected{% endif %}>Sugarcane Healthy Leaf Check</option>
 </select>
 </div>
 <label class="drop-zone" id="dropZone" for="imageInput">
