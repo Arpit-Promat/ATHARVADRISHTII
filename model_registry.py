@@ -41,6 +41,20 @@ MODEL_REGISTRY = {
         model_path="models/FruitLeaf6/fruitleaf6_model.keras",
         class_names_path="models/FruitLeaf6/fruitleaf6_class_names.json",
     ),
+    "wheat": ModelSpec(
+        key="wheat",
+        display_name="Wheat Disease Classifier",
+        version="1.0.0",
+        model_path="models/wheat_model.keras",
+        class_names_path="models/wheat_class_names.json",
+    ),
+    "rice_pest": ModelSpec(
+        key="rice_pest",
+        display_name="Rice Pest Classifier",
+        version="1.0.0",
+        model_path="models/rice_pest_model.keras",
+        class_names_path="models/rice_pest_class_names.json",
+    ),
 }
 
 
