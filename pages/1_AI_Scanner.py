@@ -237,6 +237,16 @@ MODEL_OPTIONS = {
         "models/FruitLeaf6/fruitleaf6_class_names.json",
         "fruitleaf6",
     ),
+    "Wheat — Disease Classifier (3 classes)": (
+        "models/wheat_model.keras",
+        "models/wheat_class_names.json",
+        "wheat",
+    ),
+    "Rice Pest — Classifier (10 classes)": (
+        "models/rice_pest_model.keras",
+        "models/rice_pest_class_names.json",
+        "rice_pest",
+    ),
 }
 
 selected_model_label = st.selectbox(
@@ -821,9 +831,10 @@ image_array = preprocess_image(
 # LEAF / NON-LEAF VALIDATION
 # ============================================================
 
-if selected_model_key == "fruitleaf6":
-    # FruitLeaf6 contains fruit and leaf images, so do not apply the
-    # separate leaf-only detector to this model's inputs.
+if selected_model_key in ("fruitleaf6", "wheat", "rice_pest", "sugarcane"):
+    # These crop-specific datasets have their own image distributions.
+    # The separate PlantDoc leaf detector can reject valid images from them,
+    # so skip that unrelated gate for these selected models.
     leaf_probability = None
 else:
     try:
