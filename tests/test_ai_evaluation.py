@@ -21,19 +21,24 @@ class TestAIEvaluation(unittest.TestCase):
             self.assertEqual(samples[0][1], "Apple_Scab")
 
     def test_evaluate_model_metrics(self):
-        samples = [(Path("a.jpg"), "Healthy")]
         class_names = ["Healthy", "Disease"]
 
         def predictor(_tensor):
             return np.array([0.9, 0.1], dtype=np.float32)
 
-        report = evaluate_model(
-            model=None,
-            class_names=class_names,
-            model_key="general",
-            samples=samples,
-            predictor=predictor,
-        )
+        # Create a real temporary image so this test works in clean CI runners.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            image_path = Path(temp_dir) / "a.jpg"
+            Image.new("RGB", (16, 16), "white").save(image_path)
+            samples = [(image_path, "Healthy")]
+
+            report = evaluate_model(
+                model=None,
+                class_names=class_names,
+                model_key="general",
+                samples=samples,
+                predictor=predictor,
+            )
 
         self.assertEqual(report["top1_accuracy"], 1.0)
         self.assertEqual(report["top3_accuracy"], 1.0)
