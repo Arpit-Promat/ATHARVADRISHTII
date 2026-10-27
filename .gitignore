@@ -15,3 +15,7 @@ data/metadata/*_import_manifest.csv
 data/metadata/image_audit*.csv
 data/metadata/curated_manifest.csv
 data/metadata/image_manifest.csv
+
+.venv/
+
+.venv/

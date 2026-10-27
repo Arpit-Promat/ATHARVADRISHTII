@@ -237,16 +237,32 @@ MODEL_OPTIONS = {
         "models/FruitLeaf6/fruitleaf6_class_names.json",
         "fruitleaf6",
     ),
+<<<<<<< HEAD
     "Wheat — Disease Classifier (3 classes)": (
+=======
+    "Wheat — Wheat Disease Classifier": (
+>>>>>>> 373a663 (Add trained Wheat and Rice Pest models)
         "models/wheat_model.keras",
         "models/wheat_class_names.json",
         "wheat",
     ),
+<<<<<<< HEAD
     "Rice Pest — Classifier (10 classes)": (
+=======
+    "Rice — Pest Classifier": (
+>>>>>>> 373a663 (Add trained Wheat and Rice Pest models)
         "models/rice_pest_model.keras",
         "models/rice_pest_class_names.json",
         "rice_pest",
     ),
+<<<<<<< HEAD
+=======
+    "Sugarcane — Healthy Leaf Check": (
+        "models/sugarcane_healthy_autoencoder.keras",
+        "models/sugarcane_healthy_threshold.json",
+        "sugarcane",
+    ),
+>>>>>>> 373a663 (Add trained Wheat and Rice Pest models)
 }
 
 selected_model_label = st.selectbox(
@@ -267,9 +283,9 @@ def load_ai_model(model_path, class_path):
     )
 
     with open(class_path, "r", encoding="utf-8") as f:
-        selected_class_names = json.load(f)
+        metadata = json.load(f)
 
-    return selected_model, selected_class_names
+    return selected_model, metadata
 
 
 try:
