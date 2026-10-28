@@ -34,14 +34,10 @@ if submitted:
             st.session_state["verify_email"] = user["email"]
             st.session_state["verify_phone"] = user["phone"]
             delivery_errors = []
-            for purpose, channel, destination, label in (
-                ("email_verification", "email", user["email"], "Email"),
-                ("mobile_verification", "sms", user["phone"], "SMS"),
-            ):
-                try:
-                    issue_otp(user["id"], purpose, channel, destination)
-                except Exception as exc:
-                    delivery_errors.append(f"{label}: {exc}")
+            try:
+                issue_otp(user["id"], "email_verification", "email", user["email"])
+            except Exception as exc:
+                delivery_errors.append(f"Email: {exc}")
             if delivery_errors:
                 st.session_state["verification_delivery_errors"] = [
                     "Your account was created, but verification delivery needs configuration.",
@@ -58,5 +54,5 @@ if submitted:
 
 if st.button("Back to home", use_container_width=True):
     st.switch_page("streamlit_app.py")
-st.markdown('<div class="hint">🛡️ You must verify both email and mobile before login. OTP-based 2FA can then be enabled.</div>', unsafe_allow_html=True)
+st.markdown('<div class="hint">🛡️ Verify your email to activate your account. Mobile verification and OTP-based 2FA are optional and require SMS provider configuration.</div>', unsafe_allow_html=True)
 st.markdown('</div>', unsafe_allow_html=True)
