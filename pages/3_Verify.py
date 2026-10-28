@@ -13,7 +13,7 @@ st.markdown("""
 st.markdown('<div class="card">', unsafe_allow_html=True)
 st.markdown("## 🌿 ATHARVADRISHTI")
 st.markdown('<div class="title">Verify your account</div>', unsafe_allow_html=True)
-st.markdown('<p class="muted">Complete email and mobile verification before secure login.</p>', unsafe_allow_html=True)
+st.markdown('<p class="muted">Verify your email to activate your account. Mobile verification is optional.</p>', unsafe_allow_html=True)
 for delivery_error in st.session_state.pop("verification_delivery_errors", []):
     st.error(delivery_error)
 if st.session_state.get("dev_otp_codes"):
@@ -48,8 +48,8 @@ user = get_user_by_email(email) if email else None
 email_done = bool(user and user["email_verified"]) or st.session_state.get("email_verified", False)
 mobile_done = bool(user and user["mobile_verified"]) or st.session_state.get("mobile_verified", False)
 
-if email_done and mobile_done and user:
-    st.success("Both verification steps are complete.")
+if email_done and user:
+    st.success("Email verification is complete. Your account is ready for login.")
     st.markdown("### Optional: Enable 2FA")
     channel = st.selectbox("2FA delivery channel", ["email", "sms"], format_func=lambda x: "Email OTP" if x == "email" else "SMS OTP")
     if st.button("Send 2FA setup code", use_container_width=True):
@@ -69,7 +69,7 @@ if email_done and mobile_done and user:
                 st.success("Two-factor authentication enabled.")
             else:
                 st.error("Invalid or expired 2FA setup code.")
-    st.markdown('<div class="ok">✓ Your account is now ready for secure login.</div>', unsafe_allow_html=True)
+    st.markdown('<div class="ok">✓ Email verified — your account is ready for secure login. Mobile verification is optional.</div>', unsafe_allow_html=True)
 
 if st.button("Resend codes", use_container_width=True):
     user = get_user_by_email(email)
@@ -80,15 +80,10 @@ if st.button("Resend codes", use_container_width=True):
                 issue_otp(user["id"], "email_verification", "email", user["email"])
             except Exception as exc:
                 delivery_errors.append(f"Email: {exc}")
-        if not user["mobile_verified"]:
-            try:
-                issue_otp(user["id"], "mobile_verification", "sms", user["phone"])
-            except Exception as exc:
-                delivery_errors.append(f"SMS: {exc}")
         if delivery_errors:
             st.error("Could not deliver all verification codes. " + " ".join(delivery_errors))
         else:
-            st.success("Verification codes have been resent.")
+            st.success("Email verification code has been resent.")
         if st.session_state.get("dev_otp_codes"):
             st.warning("Development-only OTPs (never enable this in production):")
             for purpose, details in st.session_state["dev_otp_codes"].items():
