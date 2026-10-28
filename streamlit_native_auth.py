@@ -376,7 +376,9 @@ def authenticate(identity: str, password: str) -> tuple[dict[str, Any] | None, s
     user = get_user_by_identity(identity)
     if not user or not check_password_hash(user["password_hash"], str(password or "")):
         return None, "Invalid email/mobile number or password."
-    if not user["email_verified"] or not user["mobile_verified"]:
+    # Email verification is the required account-activation step. Mobile OTP
+    # remains optional because SMS delivery needs a separately configured provider.
+    if not user["email_verified"]:
         return user, "verification_required"
     return user, None
 
