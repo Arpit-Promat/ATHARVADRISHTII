@@ -44,9 +44,10 @@ def api_post(path: str, payload: dict):
             return _response(False, 400), {"error": error or "Unable to create account."}
         try:
             issue_otp(user["id"], "email_verification", "email", user["email"])
-            issue_otp(user["id"], "mobile_verification", "sms", user["phone"])
         except Exception as exc:
-            return _response(False, 500), {"error": f"Account created but verification delivery failed: {exc}"}
+            # Keep the account and let the verification page explain how to
+            # configure SMTP and resend the email code. SMS is optional.
+            return _response(False, 500), {"error": f"Account created but email verification delivery failed: {exc}"}
         return _response(True, 201), {
             "id": user["id"],
             "name": user["name"],
@@ -107,8 +108,6 @@ def api_post(path: str, payload: dict):
             return _response(True), {"message": "If the account exists, verification codes have been processed."}
         if not user["email_verified"]:
             issue_otp(user["id"], "email_verification", "email", user["email"])
-        if not user["mobile_verified"]:
-            issue_otp(user["id"], "mobile_verification", "sms", user["phone"])
         return _response(True), {"message": "Verification codes have been regenerated."}
 
     if path == "/api/product-auth/2fa/verify":
