@@ -92,3 +92,31 @@ python predict.py path/to/leaf.jpg
 ## Important
 
 The repository contains the application code, but not the large PlantDoc image dataset itself. Add the required dataset under `dataset/train/` before training.
+
+
+## Configure Streamlit email verification
+
+The Streamlit-native signup flow requires email verification. SMS verification is optional; SMS-based 2FA requires Twilio credentials.
+
+In Streamlit Community Cloud, open your app's **Settings → Secrets** and add SMTP credentials. For Gmail, first enable 2-Step Verification and create a Google App Password. Never use or commit your normal Gmail password.
+
+```toml
+SMTP_HOST = "smtp.gmail.com"
+SMTP_PORT = 587
+SMTP_USERNAME = "your-gmail-address@gmail.com"
+SMTP_PASSWORD = "your-16-character-google-app-password"
+SMTP_USE_TLS = "1"
+EMAIL_FROM = "your-gmail-address@gmail.com"
+```
+
+After saving Secrets, reboot/restart the deployed app and use **Verify → Resend codes** for an existing account. Secrets are deployment settings and cannot be set through this GitHub repository.
+
+Optional SMS / SMS-based 2FA settings:
+
+```toml
+TWILIO_ACCOUNT_SID = "your-twilio-account-sid"
+TWILIO_AUTH_TOKEN = "your-twilio-auth-token"
+TWILIO_FROM_NUMBER = "+1..."
+```
+
+Do not enable `AUTH_DEV_SHOW_OTP=1` on a public deployment; it is only for local development.
