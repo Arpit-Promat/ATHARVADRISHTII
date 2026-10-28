@@ -23,7 +23,7 @@ if st.button("Login", use_container_width=True, type="primary"):
     if error == "verification_required" and user:
         st.session_state["verify_email"] = user["email"]
         st.session_state["verify_phone"] = user["phone"]
-        st.warning("Please complete email and mobile verification first.")
+        st.warning("Please verify your email address before logging in.")
         st.switch_page("pages/3_Verify.py")
     elif error:
         st.error(error)
@@ -51,5 +51,5 @@ with c2:
 if st.button("Back to Home", use_container_width=True):
     st.switch_page("streamlit_app.py")
 
-st.markdown('<div class="security">🛡️ Email verification + Mobile verification + OTP-based 2FA</div>', unsafe_allow_html=True)
+st.markdown('<div class="security">🛡️ Email verification required · Optional mobile verification · OTP-based 2FA</div>', unsafe_allow_html=True)
 st.markdown('</div>', unsafe_allow_html=True)
