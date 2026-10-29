@@ -19,3 +19,6 @@ data/metadata/image_manifest.csv
 .venv/
 
 .venv/
+
+# Local Streamlit secrets (never commit credentials)
+.streamlit/secrets.toml
