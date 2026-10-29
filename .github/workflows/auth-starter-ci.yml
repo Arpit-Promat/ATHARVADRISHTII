@@ -1,0 +1,23 @@
+name: Auth starter CI
+on:
+  push:
+    paths: ["auth_starter/**"]
+  pull_request:
+    paths: ["auth_starter/**"]
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r auth_starter/requirements.txt
+      - run: python -m compileall -q auth_starter
+      - run: cd auth_starter && pytest -q
+      - name: Basic secret scan
+        shell: bash
+        run: |
+          if grep -RInE --exclude-dir=.git --exclude='*.md' '(re_[A-Za-z0-9_]{20,}|-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----)' auth_starter; then
+            echo "Potential secret detected"; exit 1
+          fi
