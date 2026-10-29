@@ -1,0 +1,11 @@
+streamlit==1.41.0
+SQLAlchemy==2.0.36
+psycopg2-binary
+passlib[bcrypt]==1.7.4
+bcrypt==3.2.2
+pyotp
+qrcode[pil]
+cryptography
+requests
+python-dotenv
+pytest
