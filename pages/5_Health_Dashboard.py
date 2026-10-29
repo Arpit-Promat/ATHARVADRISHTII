@@ -1,5 +1,5 @@
 import streamlit as st
-from streamlit_native_auth import current_user, is_authenticated, session_logout
+from supabase_auth import current_user, is_authenticated, session_logout
 from streamlit_scan_history import dashboard_stats, list_scans, scans_to_csv
 
 st.set_page_config(
@@ -33,7 +33,7 @@ if not is_authenticated():
     st.stop()
 
 user = current_user() or {}
-user_id = int(user["id"])
+user_id = str(user["id"])
 scans = list_scans(user_id, 100)
 stats = dashboard_stats(scans)
 
