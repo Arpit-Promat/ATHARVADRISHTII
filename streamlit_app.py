@@ -1,5 +1,5 @@
 import streamlit as st
-from streamlit_native_auth import authenticate, issue_otp, session_login
+from supabase_auth import authenticate, current_user, is_authenticated, session_login, session_logout
 
 st.set_page_config(
     page_title="ATHARVADRISHTI — An Intelligent and Explainable Plant Health Analysis System",
@@ -314,38 +314,22 @@ with right:
 st.markdown('<div class="login-shell" id="login">', unsafe_allow_html=True)
 st.markdown('<div class="login-title">Welcome Back</div>', unsafe_allow_html=True)
 st.markdown('<div class="login-sub">Login to your account to continue your plant-health workflow.</div>', unsafe_allow_html=True)
-identity = st.text_input("Email or Mobile Number", key="landing_identity", placeholder="Email or Mobile Number", label_visibility="collapsed")
+identity = st.text_input("Email Address", key="landing_identity", placeholder="Email Address", label_visibility="collapsed")
 password = st.text_input("Password", type="password", key="landing_password", placeholder="Password", label_visibility="collapsed")
 l1, l2 = st.columns(2)
 with l1:
     if st.button("Login", use_container_width=True, type="primary", key="landing_login"):
         user, error = authenticate(identity, password)
-        if error == "verification_required" and user:
-            st.session_state["verify_email"] = user["email"]
-            st.session_state["verify_phone"] = user["phone"]
-            st.warning("Please complete email and mobile verification first.")
-            st.switch_page("pages/3_Verify.py")
-        elif error:
+        if error:
             st.error(error)
         elif user:
-            if user.get("two_factor_enabled"):
-                st.session_state["login_identity"] = identity
-                channel = user.get("two_factor_channel", "email")
-                if channel not in {"email", "sms"}:
-                    channel = "email"
-                destination = user["email"] if channel == "email" else user["phone"]
-                issue_otp(user["id"], "login_2fa", channel, destination)
-                st.session_state["pending_2fa_user_id"] = user["id"]
-                st.session_state["login_2fa_channel"] = channel
-                st.switch_page("pages/4_Two_Factor.py")
-            else:
-                session_login(user)
-                st.success("Login successful.")
-                st.switch_page("pages/1_AI_Scanner.py")
+            session_login(user)
+            st.success("Login successful.")
+            st.switch_page("pages/1_AI_Scanner.py")
 with l2:
     if st.button("Sign Up", use_container_width=True, key="landing_signup"):
         st.switch_page("pages/2_Sign_Up.py")
-st.markdown('<div class="security-note">🛡️ Email verification + Mobile verification + OTP-based 2FA available</div>', unsafe_allow_html=True)
+st.markdown('<div class="security-note">🛡️ Supabase Auth · Secure login sessions · Private scan history</div>', unsafe_allow_html=True)
 st.markdown('</div>', unsafe_allow_html=True)
 
 # -----------------------------------------------------------------------------
@@ -371,14 +355,14 @@ st.markdown('</div>', unsafe_allow_html=True)
 # -----------------------------------------------------------------------------
 st.markdown('<div class="security-section">', unsafe_allow_html=True)
 st.markdown('<span class="eyebrow">SECURE ACCESS</span>', unsafe_allow_html=True)
-st.markdown('<h2>Multi-Layer Authentication</h2>', unsafe_allow_html=True)
-st.markdown('<p>Your account can be protected with email verification, mobile number verification and OTP-based two-factor authentication.</p>', unsafe_allow_html=True)
+st.markdown('<h2>Secure Access & Personal History</h2>', unsafe_allow_html=True)
+st.markdown('<p>Sign in securely and keep your plant-health scan history connected to your own account.</p>', unsafe_allow_html=True)
 steps = st.columns(4)
 step_data = [
-    ("1", "Sign Up / Login", "Create your account or access an existing account."),
-    ("2", "Email Verification", "Verify the code sent to your registered email."),
-    ("3", "Mobile Verification", "Verify the OTP sent to your registered mobile number."),
-    ("4", "Two-Factor Authentication", "Add another OTP security layer for login."),
+    ("1", "Sign Up / Login", "Create your account or securely sign in."),
+    ("2", "Private Scan History", "Keep your scans connected to your own account."),
+    ("3", "Health Dashboard", "Review your recent plant-health analyses."),
+    ("4", "Account Control", "Log out when you finish your session."),
 ]
 for c, (num, title, desc) in zip(steps, step_data):
     with c:
