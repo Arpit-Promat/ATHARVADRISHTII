@@ -10,7 +10,7 @@ from tensorflow.keras.models import load_model
 from disease_guidance import get_disease_guidance
 from decision_support import condition_family
 
-from streamlit_native_auth import current_user
+from supabase_auth import current_user
 from streamlit_scan_history import make_session_key, save_scan
 
 
@@ -933,7 +933,7 @@ try:
         )
         if st.session_state.get("last_history_scan_key") != scan_session_key:
             save_scan(
-                user_id=int(authenticated_user["id"]),
+                user_id=str(authenticated_user["id"]),
                 session_key=scan_session_key,
                 filename=input_file.name,
                 prediction=predicted_name,
