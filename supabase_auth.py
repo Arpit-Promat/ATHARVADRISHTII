@@ -102,6 +102,8 @@ def authenticate(identity: str, password: str) -> tuple[dict[str, Any] | None, s
         _remember_session(response.session)
         session_login(user)
         return user, None
+    except RuntimeError as exc:
+        return None, str(exc)
     except Exception:
         return None, "Login failed. Check your email and password, then try again."
 
