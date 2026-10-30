@@ -59,9 +59,9 @@ pip install -r requirements.txt
 python train.py
 ```
 
-The trained general model is saved as:
+The trained PlantVillage general model is saved as:
 
-`models/plantdoc_model.keras`
+`models/plantdoc_model.keras` (legacy filename; the training data is PlantVillage, not PlantDoc).
 
 ## Run the application
 
