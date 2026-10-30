@@ -227,7 +227,7 @@ st.write("")
 # ============================================================
 
 MODEL_OPTIONS = {
-    "PlantDoc — General Classifier (38 classes)": (
+    "PlantVillage — General Classifier (38 classes)": (
         "models/plantdoc_model.keras",
         "models/class_names.json",
         "general",
@@ -246,11 +246,6 @@ MODEL_OPTIONS = {
         "models/rice_pest_model.keras",
         "models/rice_pest_class_names.json",
         "rice_pest",
-    ),
-    "Sugarcane — Healthy Leaf Check": (
-        "models/sugarcane_healthy_autoencoder.keras",
-        "models/sugarcane_healthy_threshold.json",
-        "sugarcane",
     ),
 }
 
@@ -356,7 +351,7 @@ def clean_class_name(name):
     return name.strip()
 
 
-def preprocess_image(image):
+def preprocess_image(image, model_key=None):
 
     image = image.convert("RGB")
 
@@ -368,7 +363,12 @@ def preprocess_image(image):
         resized
     ).astype(np.float32)
 
-    array = array / 255.0
+    # Mango MobileNetV2 is trained with preprocess_input ([-1, 1]);
+    # other registered classifiers retain their existing [0, 1] pipeline.
+    if model_key == "mango":
+        array = (array / 127.5) - 1.0
+    else:
+        array = array / 255.0
 
     array = np.expand_dims(
         array,
@@ -828,7 +828,8 @@ except Exception:
 # ============================================================
 
 image_array = preprocess_image(
-    original_image
+    original_image,
+    selected_model_key
 )
 
 
