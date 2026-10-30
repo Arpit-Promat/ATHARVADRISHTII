@@ -1,4 +1,4 @@
-"""Per-user scan history stored in Supabase Postgres with Row Level Security."""
+﻿"""Per-user scan history stored in Supabase Postgres with Row Level Security."""
 from __future__ import annotations
 
 import csv
@@ -7,7 +7,7 @@ import io
 import json
 from typing import Any
 
-from supabase_auth import get_authenticated_client
+from app_supabase_auth import get_authenticated_client
 
 
 def make_session_key(file_bytes: bytes, filename: str, prediction: str | None = None) -> str:
@@ -114,3 +114,4 @@ def scans_to_csv(scans: list[dict[str, Any]]) -> bytes:
             scan.get("status", ""), scan.get("created_at", ""),
         ])
     return output.getvalue().encode("utf-8")
+
