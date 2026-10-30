@@ -4,6 +4,7 @@ from pathlib import Path
 import tensorflow as tf
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras.applications import MobileNetV2
+from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
 from tensorflow.keras.layers import GlobalAveragePooling2D, Dense, Dropout
 from tensorflow.keras.models import Model
 from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
@@ -32,8 +33,8 @@ print("Validation folder:", VAL_DIR)
 # DATA AUGMENTATION
 # =========================
 train_datagen = ImageDataGenerator(
-    rescale=1.0 / 255,
-    rotation_range=20,
+    preprocessing_function=preprocess_input,
+    rotation_range=25,
     width_shift_range=0.15,
     height_shift_range=0.15,
     zoom_range=0.15,
@@ -41,7 +42,7 @@ train_datagen = ImageDataGenerator(
 )
 
 val_datagen = ImageDataGenerator(
-    rescale=1.0 / 255
+    preprocessing_function=preprocess_input
 )
 
 # =========================
@@ -147,6 +148,31 @@ model.fit(
     initial_epoch=0,
     epochs=10,
     callbacks=callbacks
+)
+
+# Fine-tune the final MobileNetV2 feature layers at a low learning rate.
+base_model.trainable = True
+for layer in base_model.layers[:-30]:
+    layer.trainable = False
+for layer in base_model.layers:
+    if isinstance(layer, tf.keras.layers.BatchNormalization):
+        layer.trainable = False
+
+model.compile(
+    optimizer=tf.keras.optimizers.Adam(learning_rate=1e-5),
+    loss="categorical_crossentropy",
+    metrics=["accuracy"],
+)
+
+fine_tune_callbacks = [
+    EarlyStopping(monitor="val_loss", patience=3, restore_best_weights=True),
+    ModelCheckpoint("models/mango_model.keras", monitor="val_accuracy", save_best_only=True),
+]
+model.fit(
+    train_data,
+    validation_data=val_data,
+    epochs=8,
+    callbacks=fine_tune_callbacks,
 )
 
 print("\n==============================")
