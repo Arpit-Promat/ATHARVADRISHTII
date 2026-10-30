@@ -19,8 +19,8 @@ from streamlit_scan_history import make_session_key, save_scan
 # ============================================================
 
 st.set_page_config(
-    page_title="ATHARVADRISHTI â€” An Intelligent and Explainable Plant Health Analysis System",
-    page_icon="ðŸŒ¿",
+    page_title="ATHARVADRISHTI — An Intelligent and Explainable Plant Health Analysis System",
+    page_icon="🌿",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
@@ -206,16 +206,16 @@ st.markdown("""
 # ============================================================
 
 st.markdown("""
-<div class="hero-title">ðŸŒ¿ ATHARVADRISHTI</div>
+<div class="hero-title">🌿 ATHARVADRISHTI</div>
 
 <div class="hero-subtitle">
 An Intelligent and Explainable Plant Health Analysis System
 </div>
 
 <div class="badge-row">
-    <div class="badge">âš¡ Deep Learning</div>
-    <div class="badge">ðŸ” SHAP Explainability</div>
-    <div class="badge">ðŸŒ± Plant Health Analysis</div>
+    <div class="badge">⚡ Deep Learning</div>
+    <div class="badge">🔍 SHAP Explainability</div>
+    <div class="badge">🌱 Plant Health Analysis</div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -227,27 +227,27 @@ st.write("")
 # ============================================================
 
 MODEL_OPTIONS = {
-    "PlantDoc â€” General Classifier (38 classes)": (
+    "PlantDoc — General Classifier (38 classes)": (
         "models/plantdoc_model.keras",
         "models/class_names.json",
         "general",
     ),
-    "FruitLeaf6 â€” Fruit & Leaf Classifier (24 classes)": (
+    "FruitLeaf6 — Fruit & Leaf Classifier (24 classes)": (
         "models/FruitLeaf6/fruitleaf6_model.keras",
         "models/FruitLeaf6/fruitleaf6_class_names.json",
         "fruitleaf6",
     ),
-    "Wheat â€” Disease Classifier (3 classes)": (
+    "Wheat — Disease Classifier (3 classes)": (
         "models/wheat_model.keras",
         "models/wheat_class_names.json",
         "wheat",
     ),
-    "Rice Pest â€” Classifier (10 classes)": (
+    "Rice Pest — Classifier (10 classes)": (
         "models/rice_pest_model.keras",
         "models/rice_pest_class_names.json",
         "rice_pest",
     ),
-    "Sugarcane â€” Healthy Leaf Check": (
+    "Sugarcane — Healthy Leaf Check": (
         "models/sugarcane_healthy_autoencoder.keras",
         "models/sugarcane_healthy_threshold.json",
         "sugarcane",
@@ -286,7 +286,7 @@ try:
 
 except Exception as e:
 
-    st.error("âŒ The selected AI model could not be loaded.")
+    st.error("❌ The selected AI model could not be loaded.")
     st.error(str(e))
     st.stop()
 
@@ -349,7 +349,7 @@ def clean_class_name(name):
 
     name = str(name)
 
-    name = name.replace("___", " â†’ ")
+    name = name.replace("___", " → ")
     name = name.replace("__", " ")
     name = name.replace("_", " ")
 
@@ -676,7 +676,7 @@ def create_visual_attention_map(image):
 # ============================================================
 
 st.markdown(
-    '<div class="section-title">ðŸ”¬ Analyze Your Plant Leaf</div>',
+    '<div class="section-title">🔬 Analyze Your Plant Leaf</div>',
     unsafe_allow_html=True
 )
 
@@ -694,7 +694,7 @@ upload_col, camera_col = st.columns(2)
 
 with upload_col:
     uploaded_file = st.file_uploader(
-        "ðŸ“¤ Upload Leaf Image",
+        "📤 Upload Leaf Image",
         type=[
             "jpg",
             "jpeg",
@@ -706,7 +706,7 @@ with upload_col:
 with camera_col:
     if not st.session_state["camera_open"]:
         if st.button(
-            "ðŸ“· Open Camera",
+            "📷 Open Camera",
             use_container_width=True,
             key="open_leaf_camera"
         ):
@@ -714,7 +714,7 @@ with camera_col:
             st.rerun()
     else:
         if st.button(
-            "âœ• Close Camera",
+            "✕ Close Camera",
             use_container_width=True,
             key="close_leaf_camera"
         ):
@@ -726,7 +726,7 @@ camera_file = None
 # The camera widget is created only after the user clicks Open Camera.
 if st.session_state["camera_open"]:
     camera_file = st.camera_input(
-        "ðŸ“· Capture Leaf",
+        "📷 Capture Leaf",
         key="leaf_camera",
         help="Capture a clear image of the plant leaf.",
         resolution="720p",
@@ -745,23 +745,23 @@ if input_file is None:
     with st.container(border=True):
 
         st.info(
-            "ðŸ‘† Upload a leaf image or click **ðŸ“· Open Camera** to capture one."
+            "👆 Upload a leaf image or click **📷 Open Camera** to capture one."
         )
 
-        st.markdown("### ðŸ’¡ For better results")
+        st.markdown("### 💡 For better results")
 
         tips_col1, tips_col2, tips_col3 = st.columns(3)
 
         with tips_col1:
-            st.write("ðŸŒ¿ **Clear leaf**")
+            st.write("🌿 **Clear leaf**")
             st.caption("Use a sharp and visible leaf image.")
 
         with tips_col2:
-            st.write("ðŸ’¡ **Good lighting**")
+            st.write("💡 **Good lighting**")
             st.caption("Avoid extremely dark photographs.")
 
         with tips_col3:
-            st.write("ðŸŽ¯ **Good framing**")
+            st.write("🎯 **Good framing**")
             st.caption("Keep the leaf clearly visible.")
 
     st.stop()
@@ -771,7 +771,7 @@ if input_file is None:
 # IMAGE PREVIEW + SUBMIT
 # ============================================================
 
-st.markdown("### ðŸ–¼ï¸ Ready to Analyze")
+st.markdown("### 🖼️ Ready to Analyze")
 
 preview_col, submit_col = st.columns([1.4, 0.6])
 
@@ -780,18 +780,18 @@ with preview_col:
         preview_image = Image.open(input_file).convert("RGB")
         st.image(
             preview_image,
-            caption="Preview â€” press Analyze when you are ready.",
+            caption="Preview — press Analyze when you are ready.",
             width="stretch"
         )
     except Exception:
-        st.error("âŒ Could not preview this image.")
+        st.error("❌ Could not preview this image.")
         st.stop()
 
 with submit_col:
-    st.markdown("#### ðŸš€ Submit")
+    st.markdown("#### 🚀 Submit")
     st.caption("The AI will not start until you press the button below.")
     analyze_requested = st.button(
-        "ðŸ§  Analyze Image",
+        "🧠 Analyze Image",
         use_container_width=True,
         type="primary",
         key="analyze_leaf_image",
@@ -799,7 +799,7 @@ with submit_col:
 
 if not analyze_requested:
     st.info(
-        "âœ… Image selected. Press **ðŸ§  Analyze Image** to start leaf validation and disease analysis."
+        "✅ Image selected. Press **🧠 Analyze Image** to start leaf validation and disease analysis."
     )
     st.stop()
 
@@ -817,7 +817,7 @@ try:
 except Exception:
 
     st.error(
-        "âŒ Could not read this image."
+        "❌ Could not read this image."
     )
 
     st.stop()
@@ -854,7 +854,7 @@ else:
 
     except Exception as detector_error:
 
-        st.error("âŒ Leaf validation model could not be loaded.")
+        st.error("❌ Leaf validation model could not be loaded.")
         st.error(str(detector_error))
         st.stop()
 
@@ -862,7 +862,7 @@ else:
     if leaf_probability < LEAF_DETECTOR_THRESHOLD:
 
         st.error(
-            "ðŸš« NOT A LEAF â€” ATHARVADRISHTI cannot analyze this image as a plant leaf."
+            "🚫 NOT A LEAF — ATHARVADRISHTI cannot analyze this image as a plant leaf."
         )
 
         st.warning(
@@ -870,26 +870,26 @@ else:
             "Please capture or upload a clear photo containing a visible plant leaf."
         )
 
-        st.markdown("### ðŸ“· Try again with:")
+        st.markdown("### 📷 Try again with:")
 
         tip1, tip2, tip3 = st.columns(3)
 
         with tip1:
-            st.write("ðŸŒ¿ **A visible leaf**")
+            st.write("🌿 **A visible leaf**")
             st.caption("Keep most of the leaf inside the frame.")
 
         with tip2:
-            st.write("ðŸ’¡ **Good lighting**")
+            st.write("💡 **Good lighting**")
             st.caption("Avoid very dark or blurry images.")
 
         with tip3:
-            st.write("ðŸŽ¯ **Close framing**")
+            st.write("🎯 **Close framing**")
             st.caption("Avoid objects, faces, buildings or full scenes.")
 
         st.stop()
 
     st.success(
-        f"âœ… Leaf detected â€” confidence {leaf_probability * 100:.2f}%"
+        f"✅ Leaf detected — confidence {leaf_probability * 100:.2f}%"
     )
 
 
@@ -898,7 +898,7 @@ else:
 # ============================================================
 
 with st.spinner(
-    "ðŸ§  ATHARVADRISHTI is analyzing the leaf..."
+    "🧠 ATHARVADRISHTI is analyzing the leaf..."
 ):
 
     predictions, top_indices = get_predictions(
@@ -970,7 +970,7 @@ with info_col1:
     with st.container(border=True):
 
         st.markdown(
-            "### ðŸŒ¿ Uploaded Leaf"
+            "### 🌿 Uploaded Leaf"
         )
 
         st.image(
@@ -984,17 +984,17 @@ with info_col2:
     with st.container(border=True):
 
         st.markdown(
-            "### ðŸ“‹ Image Information"
+            "### 📋 Image Information"
         )
 
         width, height = original_image.size
 
         info_data = {
             "File Name": input_file.name,
-            "Original Size": f"{width} Ã— {height} px",
-            "Model Input Size": "224 Ã— 224 px",
+            "Original Size": f"{width} × {height} px",
+            "Model Input Size": "224 × 224 px",
             "Image Type": "RGB Leaf Image",
-            "Leaf Detector": (f"{leaf_probability * 100:.2f}% leaf" if leaf_probability is not None else "Not applied â€” fruit/leaf model"),
+            "Leaf Detector": (f"{leaf_probability * 100:.2f}% leaf" if leaf_probability is not None else "Not applied — fruit/leaf model"),
             "Analysis": "Plant Health Analysis"
         }
 
@@ -1031,7 +1031,7 @@ with diagnosis_col:
     with st.container(border=True):
 
         st.markdown(
-            "### ðŸ§  AI Diagnosis"
+            "### 🧠 AI Diagnosis"
         )
 
         st.caption(
@@ -1039,7 +1039,7 @@ with diagnosis_col:
         )
 
         st.markdown(
-            f"## ðŸŒ± {predicted_name}"
+            f"## 🌱 {predicted_name}"
         )
 
         st.markdown(
@@ -1067,7 +1067,7 @@ with prediction_col:
     with st.container(border=True):
 
         st.markdown(
-            "### ðŸ† Top 3 Predictions"
+            "### 🏆 Top 3 Predictions"
         )
 
         for rank, index in enumerate(
@@ -1118,7 +1118,7 @@ with prediction_col:
 
 
 # ============================================================
-# PLANT HEALTH INFORMATION â€” OCCURRENCE + PREVENTION
+# PLANT HEALTH INFORMATION — OCCURRENCE + PREVENTION
 # ============================================================
 
 guidance = get_disease_guidance(predicted_name)
@@ -1186,7 +1186,7 @@ occurrence_context = FAMILY_CONTEXT.get(
 st.write("")
 
 st.markdown(
-    '<div class="section-title">ðŸŒ± Plant Health Information â€” How it occurs & How to prevent it</div>',
+    '<div class="section-title">🌱 Plant Health Information — How it occurs & How to prevent it</div>',
     unsafe_allow_html=True
 )
 
@@ -1203,35 +1203,35 @@ info_col1, info_col2 = st.columns(2)
 with info_col1:
     with st.container(border=True):
         if healthy_result:
-            st.markdown("### âœ… What does this result mean?")
+            st.markdown("### ✅ What does this result mean?")
             st.write(
                 "The AI classified the uploaded leaf as **healthy**. "
                 "No disease-related pattern was strong enough to become the top prediction for this image."
             )
-            st.markdown("### ðŸ”Ž What should you do?")
-            st.markdown("âœ… Continue routine monitoring of new and older leaves.")
-            st.markdown("âœ… Maintain good sanitation, airflow and appropriate irrigation.")
-            st.markdown("âœ… Re-scan if you notice spots, discoloration, curling or other changes.")
+            st.markdown("### 🔎 What should you do?")
+            st.markdown("✅ Continue routine monitoring of new and older leaves.")
+            st.markdown("✅ Maintain good sanitation, airflow and appropriate irrigation.")
+            st.markdown("✅ Re-scan if you notice spots, discoloration, curling or other changes.")
         else:
-            st.markdown("### ðŸ”¬ How does it occur?")
+            st.markdown("### 🔬 How does it occur?")
             st.write(guidance["how_it_occurs"])
-            st.markdown("### ðŸŒ¦ï¸ What can favor its spread?")
+            st.markdown("### 🌦️ What can favor its spread?")
             st.write(occurrence_context[2])
-            st.markdown("### ðŸ§­ Common spread pathway")
+            st.markdown("### 🧭 Common spread pathway")
             st.write(occurrence_context[1])
 
 with info_col2:
     with st.container(border=True):
-        st.markdown("### ðŸ›¡ï¸ Prevention")
+        st.markdown("### 🛡️ Prevention")
         for step in guidance["prevention"]:
-            st.markdown(f"âœ… {step}")
+            st.markdown(f"✅ {step}")
 
         if not healthy_result:
-            st.markdown("### ðŸ§ª Common cause / pattern")
+            st.markdown("### 🧪 Common cause / pattern")
             st.write(occurrence_context[0])
 
 if guidance.get("note"):
-    st.info(f"â„¹ï¸ {guidance['note']}")
+    st.info(f"ℹ️ {guidance['note']}")
 
 # ============================================================
 # EXPLAINABLE AI
@@ -1240,7 +1240,7 @@ if guidance.get("note"):
 st.write("")
 
 st.markdown(
-    '<div class="section-title">ðŸ”Ž Explainable AI â€” Why did the model predict this?</div>',
+    '<div class="section-title">🔎 Explainable AI — Why did the model predict this?</div>',
     unsafe_allow_html=True
 )
 
@@ -1253,7 +1253,7 @@ st.markdown(
 
 
 with st.spinner(
-    "ðŸ”Ž Generating AI explanation..."
+    "🔎 Generating AI explanation..."
 ):
 
     shap_image = generate_shap_heatmap(
@@ -1293,7 +1293,7 @@ with map_col1:
     with st.container(border=True):
 
         st.markdown(
-            "### ðŸ”¥ AI Attention Map"
+            "### 🔥 AI Attention Map"
         )
 
         st.caption(
@@ -1311,7 +1311,7 @@ with map_col2:
     with st.container(border=True):
 
         st.markdown(
-            "### ðŸŽ¯ Important / Suspected Regions"
+            "### 🎯 Important / Suspected Regions"
         )
 
         st.caption(
@@ -1355,12 +1355,12 @@ with map_col2:
 
 
 st.caption(
-    f"{explanation_type} â€” red/yellow regions represent areas receiving stronger visual importance."
+    f"{explanation_type} — red/yellow regions represent areas receiving stronger visual importance."
 )
 
 
 st.warning(
-    "âš ï¸ Highlighted areas are an AI explanation, not an exact biological measurement of infected area."
+    "⚠️ Highlighted areas are an AI explanation, not an exact biological measurement of infected area."
 )
 
 
@@ -1380,7 +1380,7 @@ with explain_col:
     with st.container(border=True):
 
         st.markdown(
-            "### ðŸ’¡ AI Explanation"
+            "### 💡 AI Explanation"
         )
 
         explanation_points = [
@@ -1431,7 +1431,7 @@ with explain_col:
         ):
 
             st.markdown(
-                f"**ðŸŸ¢ {number}. {title}**"
+                f"**🟢 {number}. {title}**"
             )
 
             st.write(
@@ -1444,11 +1444,11 @@ with guide_col:
     with st.container(border=True):
 
         st.markdown(
-            "### ðŸŽ¨ How to Read the AI Map"
+            "### 🎨 How to Read the AI Map"
         )
 
         st.markdown(
-            "ðŸ”´ **Red**"
+            "🔴 **Red**"
         )
 
         st.caption(
@@ -1458,7 +1458,7 @@ with guide_col:
         st.divider()
 
         st.markdown(
-            "ðŸŸ¡ **Yellow**"
+            "🟡 **Yellow**"
         )
 
         st.caption(
@@ -1468,7 +1468,7 @@ with guide_col:
         st.divider()
 
         st.markdown(
-            "ðŸ”µ **Blue**"
+            "🔵 **Blue**"
         )
 
         st.caption(
@@ -1479,7 +1479,7 @@ with guide_col:
     with st.container(border=True):
 
         st.markdown(
-            "### âš ï¸ Important"
+            "### ⚠️ Important"
         )
 
         st.info(
@@ -1497,13 +1497,13 @@ st.write("")
 if "healthy" in predicted_name.lower():
 
     st.success(
-        "ðŸŒ¿ The model's top prediction indicates a healthy leaf."
+        "🌿 The model's top prediction indicates a healthy leaf."
     )
 
 else:
 
     st.warning(
-        "âš ï¸ The model detected a disease-related visual pattern."
+        "⚠️ The model detected a disease-related visual pattern."
     )
 
 
@@ -1512,7 +1512,7 @@ else:
 # ============================================================
 
 with st.expander(
-    "â„¹ï¸ Important Information"
+    "ℹ️ Important Information"
 ):
 
     st.write(
@@ -1539,9 +1539,9 @@ with st.expander(
 st.markdown(
     """
     <div class="footer">
-        ðŸŒ¿ <strong>ATHARVADRISHTI</strong><br>
-        Intelligent Plant Health Analysis â€¢ Deep Learning â€¢ SHAP Explainable AI<br>
-        Major Project â€¢ CSE / AI & ML ðŸ’š
+        🌿 <strong>ATHARVADRISHTI</strong><br>
+        Intelligent Plant Health Analysis • Deep Learning • SHAP Explainable AI<br>
+        Major Project • CSE / AI & ML 💚
     </div>
     """,
     unsafe_allow_html=True
