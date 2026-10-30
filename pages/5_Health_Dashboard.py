@@ -4,7 +4,7 @@ from streamlit_scan_history import dashboard_stats, list_scans, scans_to_csv
 
 st.set_page_config(
     page_title="Dashboard | ATHARVADRISHTI",
-    page_icon="ðŸ“Š",
+    page_icon="📊",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
@@ -40,7 +40,7 @@ stats = dashboard_stats(scans)
 st.markdown(
     f"""
     <div class="hero">
-        <h1>ðŸ“Š ATHARVADRISHTI Dashboard</h1>
+        <h1>📊 ATHARVADRISHTI Dashboard</h1>
         <p>Welcome, {user.get("name", "User")}. Track your plant-health analyses in one place.</p>
     </div>
     """,
@@ -52,11 +52,11 @@ c1, c2, c3, c4, c5 = st.columns(5)
 c1.metric("Total Scans", stats["total"])
 c2.metric("Completed", stats["completed"])
 c3.metric("Rejected", stats["rejected"])
-c4.metric("Avg. Confidence", f'{stats["average_confidence"]:.2f}%' if stats["average_confidence"] is not None else "â€”")
+c4.metric("Avg. Confidence", f'{stats["average_confidence"]:.2f}%' if stats["average_confidence"] is not None else "—")
 c5.metric("Healthy Predictions", stats["healthy"])
 
 st.write("")
-st.markdown("### ðŸŒ¿ Recent Scan History")
+st.markdown("### 🌿 Recent Scan History")
 
 if not scans:
     st.info("No scans saved yet. Start your first plant-health analysis from the AI Scanner.")
@@ -66,7 +66,7 @@ else:
             "ID": s["id"],
             "File": s["filename"],
             "Prediction": s["prediction"] or "Not accepted",
-            "Confidence": f'{s["confidence"]:.2f}%' if s["confidence"] is not None else "â€”",
+            "Confidence": f'{s["confidence"]:.2f}%' if s["confidence"] is not None else "—",
             "Status": s["status"].title(),
             "Created": s["created_at"],
         }
@@ -74,7 +74,7 @@ else:
     ]
     st.dataframe(table, use_container_width=True, hide_index=True)
     st.download_button(
-        "â¬‡ï¸ Export Scan History (CSV)",
+        "⬇️ Export Scan History (CSV)",
         data=scans_to_csv(scans),
         file_name="atharvadrishti_scan_history.csv",
         mime="text/csv",
@@ -82,7 +82,7 @@ else:
     )
 
 st.write("")
-st.markdown("### ðŸ§  Product Insights")
+st.markdown("### 🧠 Product Insights")
 insight1, insight2 = st.columns(2)
 with insight1:
     st.markdown('<div class="card"><b>Condition-related predictions</b><br><span class="muted">These are model classifications and should be treated as visual decision support, not a standalone biological diagnosis.</span></div>', unsafe_allow_html=True)
@@ -92,13 +92,13 @@ with insight2:
 st.write("")
 b1, b2, b3 = st.columns(3)
 with b1:
-    if st.button("ðŸ”¬ Open AI Scanner", use_container_width=True, type="primary"):
+    if st.button("🔬 Open AI Scanner", use_container_width=True, type="primary"):
         st.switch_page("pages/1_AI_Scanner.py")
 with b2:
-    if st.button("ðŸ  Home", use_container_width=True):
+    if st.button("🏠 Home", use_container_width=True):
         st.switch_page("streamlit_app.py")
 with b3:
-    if st.button("ðŸšª Logout", use_container_width=True):
+    if st.button("🚪 Logout", use_container_width=True):
         session_logout()
         st.switch_page("streamlit_app.py")
 
