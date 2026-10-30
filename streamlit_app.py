@@ -2,8 +2,8 @@
 from app_supabase_auth import authenticate, current_user, is_authenticated, session_login, session_logout
 
 st.set_page_config(
-    page_title="ATHARVADRISHTI â€” An Intelligent and Explainable Plant Health Analysis System",
-    page_icon="ðŸŒ¿",
+    page_title="ATHARVADRISHTI — An Intelligent and Explainable Plant Health Analysis System",
+    page_icon="🌿",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
@@ -253,20 +253,20 @@ with nav:
     n1, n2, n3, n4, n5, n6 = st.columns([3.0, .9, 1.0, 1.0, 1.2, 1.0], gap="small")
     with n1:
         st.markdown(
-            '<div class="brand-wrap"><div class="brand-mark">ðŸŒ¿</div><div><div class="brand-title">ATHARVADRISHTI</div><div class="brand-sub">AN INTELLIGENT AND EXPLAINABLE PLANT HEALTH ANALYSIS SYSTEM</div></div></div>',
+            '<div class="brand-wrap"><div class="brand-mark">🌿</div><div><div class="brand-title">ATHARVADRISHTI</div><div class="brand-sub">AN INTELLIGENT AND EXPLAINABLE PLANT HEALTH ANALYSIS SYSTEM</div></div></div>',
             unsafe_allow_html=True,
         )
     with n2:
-        st.markdown('<a class="nav-link" href="#top">âŒ‚ Home</a>', unsafe_allow_html=True)
+        st.markdown('<a class="nav-link" href="#top">⌂ Home</a>', unsafe_allow_html=True)
     with n3:
-        st.markdown('<a class="nav-link" href="#features">â–¤ Features</a>', unsafe_allow_html=True)
+        st.markdown('<a class="nav-link" href="#features">▤ Features</a>', unsafe_allow_html=True)
     with n4:
-        st.markdown('<a class="nav-link" href="#login">ðŸ” Login</a>', unsafe_allow_html=True)
+        st.markdown('<a class="nav-link" href="#login">🔐 Login</a>', unsafe_allow_html=True)
     with n5:
-        if st.button("ðŸ“Š Dashboard", use_container_width=True, key="nav_dashboard"):
+        if st.button("📊 Dashboard", use_container_width=True, key="nav_dashboard"):
             st.switch_page("pages/5_Health_Dashboard.py")
     with n6:
-        mode_label = "â˜¾ Dark" if not is_dark else "â˜€ Light"
+        mode_label = "☾ Dark" if not is_dark else "☀ Light"
         if st.button(mode_label, use_container_width=True, key="nav_theme"):
             st.session_state["landing_theme"] = "dark" if not is_dark else "light"
             st.rerun()
@@ -277,33 +277,33 @@ with nav:
 left, right = st.columns([1.02, .98], gap="large")
 with left:
     st.markdown('<div class="hero-copy">', unsafe_allow_html=True)
-    st.markdown('<span class="eyebrow">ATHARVADRISHTI Â· INTELLIGENT &amp; EXPLAINABLE PLANT HEALTH</span>', unsafe_allow_html=True)
+    st.markdown('<span class="eyebrow">ATHARVADRISHTI · INTELLIGENT &amp; EXPLAINABLE PLANT HEALTH</span>', unsafe_allow_html=True)
     st.markdown('<div class="hero-title">Smarter Insights for <span>Healthier Crops</span></div>', unsafe_allow_html=True)
-    st.markdown('<div class="hero-text">ATHARVADRISHTI â€” An Intelligent and Explainable Plant Health Analysis System uses advanced AI to analyze plant health, explain visual evidence and help users make better crop-health decisions.</div>', unsafe_allow_html=True)
+    st.markdown('<div class="hero-text">ATHARVADRISHTI — An Intelligent and Explainable Plant Health Analysis System uses advanced AI to analyze plant health, explain visual evidence and help users make better crop-health decisions.</div>', unsafe_allow_html=True)
     m1, m2, m3 = st.columns(3)
-    with m1: st.markdown('<div class="mini-feature"><b>ðŸŒ¿</b><span>Detect Diseases<br>with AI</span></div>', unsafe_allow_html=True)
-    with m2: st.markdown('<div class="mini-feature"><b>ðŸ›¡</b><span>Get Expert<br>Guidance</span></div>', unsafe_allow_html=True)
-    with m3: st.markdown('<div class="mini-feature"><b>â†—</b><span>Improve Yield<br>&amp; Productivity</span></div>', unsafe_allow_html=True)
+    with m1: st.markdown('<div class="mini-feature"><b>🌿</b><span>Detect Diseases<br>with AI</span></div>', unsafe_allow_html=True)
+    with m2: st.markdown('<div class="mini-feature"><b>🛡</b><span>Get Expert<br>Guidance</span></div>', unsafe_allow_html=True)
+    with m3: st.markdown('<div class="mini-feature"><b>↗</b><span>Improve Yield<br>&amp; Productivity</span></div>', unsafe_allow_html=True)
     st.write("")
     b1, b2 = st.columns(2)
     with b1:
-        if st.button("Start Now â†’", use_container_width=True, type="primary", key="hero_start"):
+        if st.button("Start Now →", use_container_width=True, type="primary", key="hero_start"):
             st.switch_page("pages/1_AI_Scanner.py")
     with b2:
-        st.markdown('<a class="nav-link" href="#features">Learn More â†“</a>', unsafe_allow_html=True)
+        st.markdown('<a class="nav-link" href="#features">Learn More ↓</a>', unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
 with right:
     st.markdown(
         '''<div class="hero-art">
-            <div class="floating a">âš¡ AI-Powered Analysis</div>
+            <div class="floating a">⚡ AI-Powered Analysis</div>
             <div class="phone">
-                <div class="phone-screen">ðŸŒ¿
+                <div class="phone-screen">🌿
                     <div class="scan-box"></div>
-                    <div class="disease-chip">â—’ &nbsp; Disease Detected Â· Tomato Early Blight</div>
+                    <div class="disease-chip">◒ &nbsp; Disease Detected · Tomato Early Blight</div>
                 </div>
             </div>
-            <div class="floating b">ðŸ§  Explainable AI</div>
+            <div class="floating b">🧠 Explainable AI</div>
         </div>''',
         unsafe_allow_html=True,
     )
@@ -329,7 +329,7 @@ with l1:
 with l2:
     if st.button("Sign Up", use_container_width=True, key="landing_signup"):
         st.switch_page("pages/2_Sign_Up.py")
-st.markdown('<div class="security-note">ðŸ›¡ï¸ Supabase Auth Â· Secure login sessions Â· Private scan history</div>', unsafe_allow_html=True)
+st.markdown('<div class="security-note">🛡️ Supabase Auth · Secure login sessions · Private scan history</div>', unsafe_allow_html=True)
 st.markdown('</div>', unsafe_allow_html=True)
 
 # -----------------------------------------------------------------------------
@@ -338,12 +338,12 @@ st.markdown('</div>', unsafe_allow_html=True)
 st.markdown('<div class="feature-strip" id="features">', unsafe_allow_html=True)
 fcols = st.columns(6)
 features = [
-    ("ðŸ§ ", "AI Disease Detection", "Identify plant diseases with AI."),
-    ("ðŸ›¡ï¸", "Secure & Reliable", "Layered account verification."),
-    ("ðŸŒ±", "Farm Management", "Manage farms and crops."),
-    ("ðŸ“‹", "Expert Guidance", "Observation-focused guidance."),
-    ("ðŸ“ˆ", "Analytics & Reports", "Track crop health trends."),
-    ("ðŸ“±", "Multi-Device Access", "Use the platform anywhere."),
+    ("🧠", "AI Disease Detection", "Identify plant diseases with AI."),
+    ("🛡️", "Secure & Reliable", "Layered account verification."),
+    ("🌱", "Farm Management", "Manage farms and crops."),
+    ("📋", "Expert Guidance", "Observation-focused guidance."),
+    ("📈", "Analytics & Reports", "Track crop health trends."),
+    ("📱", "Multi-Device Access", "Use the platform anywhere."),
 ]
 for c, (icon, title, desc) in zip(fcols, features):
     with c:
@@ -366,9 +366,9 @@ step_data = [
 ]
 for c, (num, title, desc) in zip(steps, step_data):
     with c:
-        st.markdown(f'<div class="step"><strong>{num}. {title}</strong><p>{desc}</p><div class="mini">âœ“ Security step</div></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="step"><strong>{num}. {title}</strong><p>{desc}</p><div class="mini">✓ Security step</div></div>', unsafe_allow_html=True)
 st.markdown('</div>', unsafe_allow_html=True)
 
 st.markdown('<div class="green-band"><h2>Together for a Greener Tomorrow</h2><p>Better technology. Healthier crops. Stronger farmers.</p></div>', unsafe_allow_html=True)
-st.markdown('<div class="footer">Â© 2026 ATHARVADRISHTI Â· An Intelligent and Explainable Plant Health Analysis System</div>', unsafe_allow_html=True)
+st.markdown('<div class="footer">© 2026 ATHARVADRISHTI · An Intelligent and Explainable Plant Health Analysis System</div>', unsafe_allow_html=True)
 
