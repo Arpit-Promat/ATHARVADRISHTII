@@ -1,7 +1,7 @@
 ﻿import streamlit as st
 from app_supabase_auth import authenticate
 
-st.set_page_config(page_title="Login | ATHARVADRISHTI", page_icon="ðŸŒ¿", layout="centered")
+st.set_page_config(page_title="Login | ATHARVADRISHTI", page_icon="🌿", layout="centered")
 st.markdown("""
 <style>
 .stApp{background:#f7faf5}.block-container{max-width:620px;padding-top:3rem}
@@ -11,7 +11,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.markdown('<div class="auth-card">', unsafe_allow_html=True)
-st.markdown("## ðŸŒ¿ ATHARVADRISHTI")
+st.markdown("## 🌿 ATHARVADRISHTI")
 st.markdown('<div class="auth-title">Welcome Back</div>', unsafe_allow_html=True)
 st.markdown('<p class="muted">Login with your email address.</p>', unsafe_allow_html=True)
 
@@ -34,6 +34,6 @@ with c2:
     if st.button("Back to Home", use_container_width=True):
         st.switch_page("streamlit_app.py")
 
-st.markdown('<div class="security">ðŸ›¡ï¸ Secure Supabase email/password authentication Â· Private scan history</div>', unsafe_allow_html=True)
+st.markdown('<div class="security">🛡️ Secure Supabase email/password authentication · Private scan history</div>', unsafe_allow_html=True)
 st.markdown('</div>', unsafe_allow_html=True)
 
