@@ -247,11 +247,8 @@ MODEL_OPTIONS = {
         "models/rice_pest_class_names.json",
         "rice_pest",
     ),
-    "Sugarcane — Healthy Leaf Check": (
-        "models/sugarcane_healthy_autoencoder.keras",
-        "models/sugarcane_healthy_threshold.json",
-        "sugarcane",
-    ),
+    # Sugarcane uses an autoencoder + reconstruction threshold, not a
+    # softmax classifier. It must not enter the classifier prediction path.
 }
 
 selected_model_label = st.selectbox(
