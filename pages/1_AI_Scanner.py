@@ -14,7 +14,7 @@ from decision_support import condition_family
 from app_supabase_auth import current_user, session_logout
 from inference_preprocessing import batch_to_uint8_rgb, preprocess_rgb_array
 from streamlit_scan_history import make_session_key, save_scan
-from vegetable_leaf_support import vegetable_class_coverage
+from vegetable_leaf_support import vegetable_catalog, vegetable_class_coverage
 
 
 # ============================================================
@@ -380,6 +380,17 @@ if selected_model_key == "general":
             "For additional vegetables such as brinjal, cucumber, okra, cabbage or cauliflower, "
             "a labelled dataset and model retraining are required."
         )
+
+    with st.expander("🇮🇳 India vegetable crop catalog — planned dataset coverage"):
+        st.warning(
+            "These crops are included in the project dataset roadmap. They are NOT all "
+            "trained or supported by the current 38-class PlantDoc model yet."
+        )
+        catalog_names = [item["crop"] for item in vegetable_catalog()]
+        catalog_columns = st.columns(3)
+        for index, crop_name in enumerate(catalog_names):
+            with catalog_columns[index % 3]:
+                st.caption("• " + crop_name)
 
 
 # ============================================================
