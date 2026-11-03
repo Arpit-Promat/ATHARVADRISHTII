@@ -1,4 +1,5 @@
-﻿import streamlit as st
+﻿import html
+import streamlit as st
 from app_supabase_auth import current_user, is_authenticated, session_logout
 from streamlit_scan_history import dashboard_stats, list_scans, scans_to_csv
 
@@ -34,14 +35,21 @@ if not is_authenticated():
 
 user = current_user() or {}
 user_id = str(user["id"])
-scans = list_scans(user_id, 100)
+history_error = None
+try:
+    scans = list_scans(user_id, 100)
+except Exception:
+    # Keep the dashboard usable when the Supabase table/migration is not ready.
+    scans = []
+    history_error = "Scan history is temporarily unavailable. Check the Supabase scan_history migration and app Secrets."
 stats = dashboard_stats(scans)
+safe_display_name = html.escape(str(user.get("name") or "User"))
 
 st.markdown(
     f"""
     <div class="hero">
         <h1>📊 ATHARVADRISHTI Dashboard</h1>
-        <p>Welcome, {user.get("name", "User")}. Track your plant-health analyses in one place.</p>
+        <p>Welcome, {safe_display_name}. Track your plant-health analyses in one place.</p>
     </div>
     """,
     unsafe_allow_html=True,
@@ -57,6 +65,8 @@ c5.metric("Healthy Predictions", stats["healthy"])
 
 st.write("")
 st.markdown("### 🌿 Recent Scan History")
+if history_error:
+    st.warning(history_error)
 
 if not scans:
     st.info("No scans saved yet. Start your first plant-health analysis from the AI Scanner.")
