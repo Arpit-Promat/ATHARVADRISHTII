@@ -94,6 +94,10 @@ python predict.py path/to/leaf.jpg
 The repository contains the application code, but not the large PlantDoc image dataset itself. Add the required dataset under `dataset/train/` before training.
 
 
+## Streamlit Community Cloud deployment
+
+See [STREAMLIT_DEPLOYMENT.md](STREAMLIT_DEPLOYMENT.md) for the exact repository, branch, and main-file settings. The Streamlit entrypoint is `streamlit_app.py`; `app.py` is the separate Flask API/backend. Configure Supabase credentials in Streamlit Cloud Secrets, never in Git.
+
 ## Configure Streamlit email verification
 
 The Streamlit-native signup flow requires email verification. SMS verification is optional; SMS-based 2FA requires Twilio credentials.
