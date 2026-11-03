@@ -10,7 +10,8 @@ from tensorflow.keras.models import load_model
 from disease_guidance import get_disease_guidance
 from decision_support import condition_family
 
-from app_supabase_auth import current_user
+from app_supabase_auth import current_user, session_logout
+from inference_preprocessing import batch_to_uint8_rgb, preprocess_rgb_array
 from streamlit_scan_history import make_session_key, save_scan
 
 
@@ -200,6 +201,26 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# Keep the scanner visually consistent with the current light-green landing page.
+st.markdown("""
+<style>
+.stApp {background:#f7faf5 !important; color:#10251a !important;}
+.main .block-container {max-width:1280px !important; padding-top:2.5rem !important;}
+h1,h2,h3,.hero-title {color:#10251a !important;}
+p,label,.stMarkdown {color:#52675a;}
+.hero-title span {color:#2fa564 !important;}
+.hero-subtitle {color:#63756a !important;}
+.badge {background:#edf6e8 !important;border-color:#d8e6d9 !important;color:#1d7b46 !important;}
+div[data-testid="stVerticalBlockBorderWrapper"] {background:#fff !important;border:1px solid #d8e6d9 !important;}
+div[data-testid="stMetric"] {background:#fff !important;border:1px solid #d8e6d9 !important;}
+div[data-testid="stMetricValue"] {color:#1d7b46 !important;}
+div[data-testid="stFileUploader"] {background:#f5faf2 !important;border-color:#78b98a !important;}
+div[data-testid="stFileUploader"] section,div[data-testid="stFileUploaderDropzone"] {background:transparent !important;}
+.section-title {color:#1d7b46 !important;}
+.section-subtitle {color:#63756a !important;}
+</style>
+""", unsafe_allow_html=True)
+
 
 # ============================================================
 # HEADER
@@ -221,6 +242,19 @@ An Intelligent and Explainable Plant Health Analysis System
 
 st.write("")
 
+# Simple navigation is available even when this page is used as the Streamlit entry point.
+nav_home, nav_dashboard, nav_logout = st.columns([1, 1, 1])
+with nav_home:
+    if st.button("⌂ Home", use_container_width=True, key="scanner_home"):
+        st.switch_page("streamlit_app.py")
+with nav_dashboard:
+    if st.button("📊 My Dashboard", use_container_width=True, key="scanner_dashboard"):
+        st.switch_page("pages/5_Health_Dashboard.py")
+with nav_logout:
+    if st.button("↪ Logout", use_container_width=True, key="scanner_logout"):
+        session_logout()
+        st.switch_page("streamlit_app.py")
+
 
 # ============================================================
 # MODEL LOADING
@@ -231,6 +265,11 @@ MODEL_OPTIONS = {
         "models/plantdoc_model.keras",
         "models/class_names.json",
         "general",
+    ),
+    "Mango — Disease Classifier (8 classes)": (
+        "models/mango_model.keras",
+        "models/mango_class_names.json",
+        "mango",
     ),
     "FruitLeaf6 — Fruit & Leaf Classifier (24 classes)": (
         "models/FruitLeaf6/fruitleaf6_model.keras",
@@ -262,6 +301,16 @@ selected_model_path, selected_class_path, selected_model_key = MODEL_OPTIONS[sel
 
 @st.cache_resource
 def load_ai_model(model_path, class_path):
+
+    # Git LFS pointer files are tiny text placeholders, not loadable Keras models.
+    # This produces a useful deployment error instead of a confusing ZIP/model error.
+    with open(model_path, "rb") as model_file:
+        model_header = model_file.read(128)
+    if model_header.startswith(b"version https://git-lfs.github.com/spec/v1"):
+        raise RuntimeError(
+            f"{model_path} is still a Git LFS pointer in this deployment. "
+            "Ensure the actual model artifact is available to Streamlit Cloud."
+        )
 
     selected_model = load_model(
         model_path,
@@ -390,23 +439,8 @@ def preprocess_image(image, model_key):
         (IMG_SIZE, IMG_SIZE)
     )
 
-    array = np.array(
-        resized
-    ).astype(np.float32)
-
-    # Wheat and Rice Pest models were trained with an internal
-    # MobileNetV2 Rescaling(1/127.5, offset=-1) layer. They expect
-    # RGB pixel values in [0, 255], so do not divide these inputs by 255.
-    # The other existing classifiers retain their original [0, 1] input.
-    if model_key not in ("wheat", "rice_pest"):
-        array = array / 255.0
-
-    array = np.expand_dims(
-        array,
-        axis=0
-    )
-
-    return array
+    array = np.array(resized)
+    return preprocess_rgb_array(array, model_key)
 
 
 def get_predictions(image_array, selected_model):
@@ -555,9 +589,9 @@ def generate_shap_heatmap(
             cv2.COLOR_BGR2RGB
         )
 
-        original = (
-            image_array[0] * 255
-        ).astype(np.uint8)
+        # Reconstruct the RGB image using the same model-specific input scale.
+        # Raw-pixel models must not be multiplied by 255 a second time.
+        original = batch_to_uint8_rgb(image_array, selected_model_key)
 
         alpha = (
             heat.astype(np.float32) /
@@ -720,9 +754,10 @@ with upload_col:
         type=[
             "jpg",
             "jpeg",
-            "png"
+            "png",
+            "webp",
         ],
-        help="Upload a clear JPG, JPEG or PNG image of a plant leaf."
+        help="Upload a clear JPG, JPEG, PNG or WebP image of a plant leaf."
     )
 
 with camera_col:
