@@ -264,7 +264,8 @@ with nav:
         st.markdown('<a class="nav-link" href="#login">🔐 Login</a>', unsafe_allow_html=True)
     with n5:
         if st.button("📊 Dashboard", use_container_width=True, key="nav_dashboard"):
-            st.switch_page("pages/5_Health_Dashboard.py")
+            destination = "pages/5_Health_Dashboard.py" if is_authenticated() else "pages/1_Login.py"
+            st.switch_page(destination)
     with n6:
         mode_label = "☾ Dark" if not is_dark else "☀ Light"
         if st.button(mode_label, use_container_width=True, key="nav_theme"):
@@ -288,7 +289,8 @@ with left:
     b1, b2 = st.columns(2)
     with b1:
         if st.button("Start Now →", use_container_width=True, type="primary", key="hero_start"):
-            st.switch_page("pages/1_AI_Scanner.py")
+            destination = "pages/1_AI_Scanner.py" if is_authenticated() else "pages/1_Login.py"
+            st.switch_page(destination)
     with b2:
         st.markdown('<a class="nav-link" href="#features">Learn More ↓</a>', unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
