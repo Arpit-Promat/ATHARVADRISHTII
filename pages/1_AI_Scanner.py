@@ -328,9 +328,24 @@ def load_leaf_detector():
 
     with open(
         "models/leaf_detector_classes.json",
-        "r"
+        "r",
+        encoding="utf-8",
     ) as f:
         detector_classes = json.load(f)
+
+    if not isinstance(detector_classes, dict) or set(detector_classes) != {"leaf", "not_leaf"}:
+        raise ValueError(
+            "Leaf detector class map must contain exactly 'leaf' and 'not_leaf'."
+        )
+    if sorted(detector_classes.values()) != [0, 1]:
+        raise ValueError(
+            "Leaf detector class indices must be exactly 0 and 1."
+        )
+    output_shape = detector.output_shape
+    if isinstance(output_shape, list) or int(output_shape[-1]) != 1:
+        raise ValueError(
+            f"Leaf detector must have one sigmoid output; got {output_shape}."
+        )
 
     return detector, detector_classes
 
