@@ -4,7 +4,7 @@ ATHARVADRISHTI now has a separate training path for vegetable-leaf classificatio
 
 ## Important: catalog coverage is not trained-model coverage
 
-The India-focused catalog currently lists these 53 crop groups:
+The India-focused catalog currently lists these 55 crop groups:
 
 Amaranth, Ash gourd, Beetroot, Bitter gourd, Bottle gourd, Brinjal, Broccoli, Cabbage, Capsicum, Carrot, Cauliflower, Cluster beans, Colocasia, Cowpea, Cucumber, Curry leaf, Drumstick, Fenugreek, Garlic, Gherkin, Green chilli, Ivy gourd, Lablab bean, Lesser yam, Lettuce, Lotus stem, Mint, Mustard greens, Okra, Onion, Pea, Pointed gourd, Potato, Pumpkin, Radish, Raw banana, Ribbed celery, Ridge gourd, Round chilli, Snake gourd, Spinach, Sponge gourd, Spring onion, Sweet corn, Sweet potato, Tapioca, Tinda, Tomato, Turmeric, Winged bean, Yam, Zucchini, Ginger, Coriander.
 
