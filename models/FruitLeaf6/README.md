@@ -1,8 +1,10 @@
 # FruitLeaf6 model artifacts
 
-The FruitLeaf6 integration expects these two files in this directory:
+The FruitLeaf6 scanner integration uses these two files:
 
-- `fruitleaf6_model.keras` — trained Keras model weights.
-- `fruitleaf6_class_names.json` — the exact ordered class-name list used during training (24 entries).
+- `fruitleaf6_model.keras` — trained Keras model artifact, stored with Git LFS.
+- `fruitleaf6_class_names.json` — the ordered 24-class list matching the model output indices.
 
-These files were not present in the repository when the integration was committed. Copy the original trained files into this folder before selecting FruitLeaf6 in either application. Do not generate or reorder the class names manually; their order must match the model output indices.
+The model includes its own MobileNetV2-style input rescaling layer and expects RGB pixel values in the `[0, 255]` range. The Streamlit scanner preserves that input range and uses the same scale when rendering the explanation overlay.
+
+Do not reorder or manually regenerate the class-name list. If the deployed scanner reports that the model file is still a Git LFS pointer, check the Git LFS object in the repository and reboot the Streamlit app after the object is available.
