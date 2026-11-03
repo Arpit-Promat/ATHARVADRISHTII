@@ -356,7 +356,7 @@ def clean_class_name(name):
     return name.strip()
 
 
-def preprocess_image(image):
+def preprocess_image(image, model_key):
 
     image = image.convert("RGB")
 
@@ -368,7 +368,12 @@ def preprocess_image(image):
         resized
     ).astype(np.float32)
 
-    array = array / 255.0
+    # Wheat and Rice Pest models were trained with an internal
+    # MobileNetV2 Rescaling(1/127.5, offset=-1) layer. They expect
+    # RGB pixel values in [0, 255], so do not divide these inputs by 255.
+    # The other existing classifiers retain their original [0, 1] input.
+    if model_key not in ("wheat", "rice_pest"):
+        array = array / 255.0
 
     array = np.expand_dims(
         array,
@@ -828,7 +833,8 @@ except Exception:
 # ============================================================
 
 image_array = preprocess_image(
-    original_image
+    original_image,
+    selected_model_key
 )
 
 
