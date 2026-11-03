@@ -94,6 +94,10 @@ python predict.py path/to/leaf.jpg
 The repository contains the application code, but not the large PlantDoc image dataset itself. Add the required dataset under `dataset/train/` before training.
 
 
+## India vegetable-leaf expansion
+
+The scanner now distinguishes the vegetable classes already trained in the PlantDoc model from the broader India-focused crop catalog. A separate MobileNetV2 training pipeline is available in `train_vegetable_leaf.py`; see [VEGETABLE_LEAF_TRAINING.md](VEGETABLE_LEAF_TRAINING.md) for dataset structure, crop scope, validation requirements and deployment steps. The dedicated model is offered in the scanner only after its trained `.keras` file and matching ordered class-name JSON are present.
+
 ## Streamlit Community Cloud deployment
 
 See [STREAMLIT_DEPLOYMENT.md](STREAMLIT_DEPLOYMENT.md) for the exact repository, branch, and main-file settings. The Streamlit entrypoint is `streamlit_app.py`; `app.py` is the separate Flask API/backend. Configure Supabase credentials in Streamlit Cloud Secrets, never in Git.
