@@ -39,6 +39,19 @@ class PredictionEngineTests(unittest.TestCase):
         self.assertEqual(model_identifier("mango"), "mango@1.0.0")
         self.assertEqual(model_identifier("leaf_detector"), "leaf_detector@1.0.0")
 
+    def test_class_name_count_must_match_model_outputs(self):
+        with self.assertRaisesRegex(ValueError, "does not match"):
+            assess_prediction([0.7, 0.3], ["Only one class"], "general")
+
+    def test_non_finite_predictions_are_rejected(self):
+        with self.assertRaisesRegex(ValueError, "non-finite"):
+            normalize_probabilities([0.5, float("nan")])
+
+    def test_logits_are_converted_to_probabilities(self):
+        result = normalize_probabilities([2.0, 1.0, 0.0])
+        self.assertAlmostEqual(float(result.sum()), 1.0, places=6)
+        self.assertGreater(float(result[0]), float(result[1]))
+
 
 if __name__ == "__main__":
     unittest.main()
