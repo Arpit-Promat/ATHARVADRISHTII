@@ -48,6 +48,13 @@ def normalize_probabilities(predictions: Any) -> np.ndarray:
 def rank_predictions(predictions: Any, class_names: list[str], top_k: int = 3) -> list[dict[str, Any]]:
     """Return sorted top-k predictions with stable class names and probabilities."""
     values = normalize_probabilities(predictions)
+    if len(values) != len(class_names):
+        raise ValueError(
+            f"Model output count ({len(values)}) does not match "
+            f"class-name count ({len(class_names)})."
+        )
+    if not class_names or any(not isinstance(name, str) or not name.strip() for name in class_names):
+        raise ValueError("Class names must be a non-empty list of non-blank strings.")
     limit = min(max(1, int(top_k)), len(values))
     indices = np.argsort(values)[::-1][:limit]
     results: list[dict[str, Any]] = []
