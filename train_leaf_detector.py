@@ -6,7 +6,7 @@ from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras.applications import MobileNetV2
 from tensorflow.keras.layers import GlobalAveragePooling2D, Dense, Dropout
 from tensorflow.keras.models import Model
-from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
+from tensorflow.keras.callbacks import EarlyStopping
 
 # =========================
 # DATASET PATH (Leaf vs Not-Leaf)
@@ -71,12 +71,10 @@ print("Validation images:", val_data.samples)
 print("Class indices:", train_data.class_indices)
 print("==============================\n")
 
-# =========================
-# SAVE CLASS INDEX MAPPING
-# (so app.py knows which index means "leaf")
-# =========================
-with open(MODEL_DIR / "leaf_detector_classes.json", "w") as f:
-    json.dump(train_data.class_indices, f, indent=2)
+if train_data.class_indices != val_data.class_indices:
+    raise SystemExit("ERROR: Training and validation class-index mappings differ.")
+if set(train_data.class_indices) != {"leaf", "not_leaf"}:
+    raise SystemExit(f"ERROR: Expected leaf and not_leaf folders; found {sorted(train_data.class_indices)}.")
 
 # =========================
 # MOBILENETV2 (binary output)
@@ -118,11 +116,6 @@ callbacks = [
         patience=3,
         restore_best_weights=True
     ),
-    ModelCheckpoint(
-        "models/leaf_detector_model.keras",
-        monitor="val_accuracy",
-        save_best_only=True
-    )
 ]
 
 # =========================
@@ -130,13 +123,27 @@ callbacks = [
 # =========================
 print("\nStarting training...\n")
 
-model.fit(
+history = model.fit(
     train_data,
     validation_data=val_data,
     initial_epoch=0,
     epochs=8,
     callbacks=callbacks
 )
+
+model_path = MODEL_DIR / "leaf_detector_model.keras"
+class_map_path = MODEL_DIR / "leaf_detector_classes.json"
+model.save(model_path)
+temp_class_map_path = class_map_path.with_suffix(".json.tmp")
+temp_class_map_path.write_text(json.dumps(train_data.class_indices, indent=2) + "\n", encoding="utf-8")
+temp_class_map_path.replace(class_map_path)
+
+train_acc = history.history.get("accuracy", [None])[-1]
+val_acc = history.history.get("val_accuracy", [None])[-1]
+if train_acc is not None and val_acc is not None:
+    print(f"Final train accuracy: {train_acc:.4f}; validation accuracy: {val_acc:.4f}")
+    if train_acc - val_acc > 0.15:
+        print("WARNING: Large train/validation gap; possible overfitting.")
 
 print("\n==============================")
 print("TRAINING COMPLETE")
