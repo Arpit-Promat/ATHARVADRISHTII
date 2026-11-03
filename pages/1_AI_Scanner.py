@@ -271,6 +271,20 @@ def load_ai_model(model_path, class_path):
     with open(class_path, "r", encoding="utf-8") as f:
         metadata = json.load(f)
 
+    if not isinstance(metadata, list) or not metadata or not all(isinstance(name, str) and name.strip() for name in metadata):
+        raise ValueError("Class-name file must contain a non-empty JSON list of class names.")
+
+    output_shape = selected_model.output_shape
+    if isinstance(output_shape, list):
+        raise ValueError("This scanner supports a single-output classifier only.")
+    output_count = int(output_shape[-1])
+    if output_count != len(metadata):
+        raise ValueError(
+            f"Model/class mapping mismatch: model outputs {output_count} classes, "
+            f"but {class_path} contains {len(metadata)} names. "
+            "Restore the matching class-name file or retrain this model."
+        )
+
     return selected_model, metadata
 
 
@@ -382,51 +396,42 @@ def preprocess_image(image, model_key):
 
 def get_predictions(image_array, selected_model):
 
-    predictions = selected_model.predict(
-        image_array,
-        verbose=0
-    )[0]
+    raw_output = selected_model.predict(image_array, verbose=0)
+    raw_output = np.asarray(raw_output, dtype=np.float64)
 
-    predictions = np.asarray(
-        predictions
-    ).astype(np.float64)
+    if raw_output.ndim != 2 or raw_output.shape[0] != 1:
+        raise ValueError(f"Unexpected model output shape: {raw_output.shape}")
 
-    if (
-        np.any(predictions < 0)
-        or
-        np.max(predictions) > 1.0
-        or
-        not np.isclose(
-            np.sum(predictions),
-            1.0,
-            atol=0.05
-        )
-    ):
+    predictions = raw_output[0]
+    if predictions.ndim != 1 or predictions.size == 0:
+        raise ValueError("Model returned an empty or invalid class-probability vector.")
+    if not np.all(np.isfinite(predictions)):
+        raise ValueError("Model returned NaN or infinite prediction values.")
 
-        exp_values = np.exp(
-            predictions - np.max(predictions)
-        )
-
-        predictions = (
-            exp_values /
-            np.sum(exp_values)
-        )
-
+    # Softmax outputs should already be probabilities. Apply softmax only
+    # when the model returns logits; never silently accept invalid values.
+    looks_like_probabilities = (
+        np.all(predictions >= 0)
+        and np.all(predictions <= 1)
+        and np.isclose(np.sum(predictions), 1.0, atol=0.05)
+    )
+    if not looks_like_probabilities:
+        shifted = predictions - np.max(predictions)
+        exp_values = np.exp(shifted)
+        total = np.sum(exp_values)
+        if not np.isfinite(total) or total <= 0:
+            raise ValueError("Could not normalize model output.")
+        predictions = exp_values / total
     else:
+        predictions = predictions / np.sum(predictions)
 
-        total = np.sum(predictions)
+    if predictions.size != len(class_names):
+        raise ValueError(
+            f"Prediction has {predictions.size} outputs but "
+            f"{len(class_names)} class names are configured."
+        )
 
-        if total > 0:
-
-            predictions = (
-                predictions /
-                total
-            )
-
-    top_indices = np.argsort(
-        predictions
-    )[::-1][:3]
-
+    top_indices = np.argsort(predictions)[::-1][:3]
     return predictions, top_indices
 
 
