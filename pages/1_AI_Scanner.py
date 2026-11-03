@@ -1,5 +1,6 @@
 ﻿import streamlit as st
 import json
+from pathlib import Path
 import numpy as np
 import cv2
 import shap
@@ -290,6 +291,17 @@ MODEL_OPTIONS = {
     # Sugarcane uses an autoencoder + reconstruction threshold, not a
     # softmax classifier. It must not enter the classifier prediction path.
 }
+
+# The dedicated vegetable model is shown only after real trained artifacts
+# exist in the deployment. A catalog by itself is not a trained classifier.
+VEGETABLE_MODEL_PATH = Path("models/vegetable_leaf_model.keras")
+VEGETABLE_CLASSES_PATH = Path("models/vegetable_leaf_class_names.json")
+if VEGETABLE_MODEL_PATH.is_file() and VEGETABLE_CLASSES_PATH.is_file():
+    MODEL_OPTIONS["India Vegetable Leaf Classifier"] = (
+        str(VEGETABLE_MODEL_PATH),
+        str(VEGETABLE_CLASSES_PATH),
+        "vegetable_leaf",
+    )
 
 selected_model_label = st.selectbox(
     "Choose AI Model",
