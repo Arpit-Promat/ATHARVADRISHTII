@@ -69,6 +69,19 @@ The script writes:
 
 The Streamlit scanner automatically adds **India Vegetable Leaf Classifier** to its model selector only when both trained artifacts exist. It uses the same RGB [0, 1] preprocessing as the training script.
 
+## Public dataset leads for building the full dataset
+
+These are candidate sources to curate into the folder structure above. They are **not automatically downloaded or included in this repository**, and their published class labels should be reviewed before training.
+
+| Source | Vegetable coverage / size | Notes |
+|---|---|---|
+| [Digital Green Crop Disease Images](https://huggingface.co/datasets/DigiGreen/Crop_Disease_Images) | Indian field annotations; includes chilli, brinjal, cauliflower, potato, pea, pumpkin, cowpea and other crops; 1,026 rows | Dataset card states CC BY 4.0. Review annotation quality and image availability; not every row is a clean single-leaf image. |
+| [Brinjal leaf dataset — Mendeley Data](https://data.mendeley.com/datasets/c39p3k87g2/2) | 850 original Rajasthan field images; healthy, Phomopsis blight and little-leaf classes | Dataset page states CC BY 4.0 and provides metadata with original-level splits. Use the original images and respect its split metadata; do not randomly split augmented variants. |
+| [Okra disease dataset paper — PubMed](https://pubmed.ncbi.nlm.nih.gov/40687361/) | 2,500 India field images; healthy plus five disease classes | The paper describes real-field Indian images. Check the linked dataset's own access and license terms before reuse; the article is open access for non-commercial use. |
+| [Comprehensive Vegetable Leaf Disease Image Collection — Mendeley](https://data.mendeley.com/datasets/rh8c5tgg5k/1) | 1,923 images across broccoli, cabbage, cauliflower and turnip | Useful additional cole-crop coverage; check the dataset page license and verify source/split metadata before merging. |
+
+Do not treat published benchmark accuracy as ATHARVADRISHTI's accuracy. Re-train and evaluate on a held-out set that is independent of the source dataset's training images.
+
 ## Data quality checklist
 
 - Capture leaves from multiple farms/fields, districts, seasons and phones.
