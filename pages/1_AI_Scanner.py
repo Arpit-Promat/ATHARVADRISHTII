@@ -13,6 +13,7 @@ from decision_support import condition_family
 from app_supabase_auth import current_user, session_logout
 from inference_preprocessing import batch_to_uint8_rgb, preprocess_rgb_array
 from streamlit_scan_history import make_session_key, save_scan
+from vegetable_leaf_support import vegetable_class_coverage
 
 
 # ============================================================
@@ -261,7 +262,7 @@ with nav_logout:
 # ============================================================
 
 MODEL_OPTIONS = {
-    "PlantDoc — General Classifier (38 classes)": (
+    "PlantDoc — General & Vegetable Leaf Classifier (38 classes)": (
         "models/plantdoc_model.keras",
         "models/class_names.json",
         "general",
@@ -297,6 +298,24 @@ selected_model_label = st.selectbox(
     key="scanner_model_choice",
 )
 selected_model_path, selected_class_path, selected_model_key = MODEL_OPTIONS[selected_model_label]
+
+if selected_model_key == "general":
+    vegetable_coverage = vegetable_class_coverage(class_names if "class_names" in globals() else [])
+    with st.expander("🥬 Vegetable leaf diseases currently supported", expanded=True):
+        st.markdown(
+            "**The existing PlantDoc 38-class model already includes these vegetable-leaf categories.** "
+            "This is existing trained coverage, not a newly trained vegetable-only model."
+        )
+        coverage_cols = st.columns(4)
+        for column, (crop, labels) in zip(coverage_cols, vegetable_coverage.items()):
+            with column:
+                st.markdown(f"**{crop}**")
+                for label in labels:
+                    st.caption("• " + label.split("___", 1)[-1].replace("_", " ").replace(",", ""))
+        st.caption(
+            "For additional vegetables such as brinjal, cucumber, okra, cabbage or cauliflower, "
+            "a labelled dataset and model retraining are required."
+        )
 
 
 @st.cache_resource
