@@ -1,4 +1,4 @@
-﻿import streamlit as st
+import streamlit as st
 import json
 from pathlib import Path
 import numpy as np
@@ -261,138 +261,108 @@ with nav_logout:
 
 
 # ============================================================
-# MODEL LOADING
+# MODEL LOADING — AUTOMATIC ROUTING (NO MANUAL MODEL SELECTOR)
 # ============================================================
 
 MODEL_OPTIONS = {
-    "PlantDoc — General & Vegetable Leaf Classifier (38 classes)": (
-        "models/plantdoc_model.keras",
-        "models/class_names.json",
-        "general",
-    ),
-    "Mango — Disease Classifier (8 classes)": (
-        "models/mango_model.keras",
-        "models/mango_class_names.json",
-        "mango",
-    ),
-    "FruitLeaf6 — Fruit & Leaf Classifier (24 classes)": (
-        "models/FruitLeaf6/fruitleaf6_model.keras",
-        "models/FruitLeaf6/fruitleaf6_class_names.json",
-        "fruitleaf6",
-    ),
-    "Wheat — Disease Classifier (3 classes)": (
-        "models/wheat_model.keras",
-        "models/wheat_class_names.json",
-        "wheat",
-    ),
-    "Rice Pest — Classifier (10 classes)": (
-        "models/rice_pest_model.keras",
-        "models/rice_pest_class_names.json",
-        "rice_pest",
-    ),
-    # Sugarcane uses an autoencoder + reconstruction threshold, not a
-    # softmax classifier. It must not enter the classifier prediction path.
+    "general": ("models/plantdoc_model.keras", "models/class_names.json"),
+    "mango": ("models/mango_model.keras", "models/mango_class_names.json"),
+    "fruitleaf6": ("models/FruitLeaf6/fruitleaf6_model.keras", "models/FruitLeaf6/fruitleaf6_class_names.json"),
+    "wheat": ("models/wheat_model.keras", "models/wheat_class_names.json"),
+    "rice_pest": ("models/rice_pest_model.keras", "models/rice_pest_class_names.json"),
 }
 
-# The dedicated vegetable model is shown only after real trained artifacts
-# exist in the deployment. A catalog by itself is not a trained classifier.
-VEGETABLE_MODEL_PATH = Path("models/vegetable_leaf_model.keras")
-VEGETABLE_CLASSES_PATH = Path("models/vegetable_leaf_class_names.json")
-if VEGETABLE_MODEL_PATH.is_file() and VEGETABLE_CLASSES_PATH.is_file():
-    MODEL_OPTIONS["India Vegetable Leaf Classifier"] = (
-        str(VEGETABLE_MODEL_PATH),
-        str(VEGETABLE_CLASSES_PATH),
-        "vegetable_leaf",
+if Path("models/vegetable_leaf_model.keras").is_file() and Path("models/vegetable_leaf_class_names.json").is_file():
+    MODEL_OPTIONS["vegetable_leaf"] = (
+        "models/vegetable_leaf_model.keras",
+        "models/vegetable_leaf_class_names.json",
     )
 
-selected_model_label = st.selectbox(
-    "Choose AI Model",
-    options=list(MODEL_OPTIONS.keys()),
-    index=0,
-    key="scanner_model_choice",
-)
-selected_model_path, selected_class_path, selected_model_key = MODEL_OPTIONS[selected_model_label]
 
 @st.cache_resource
 def load_ai_model(model_path, class_path):
-
-    # Git LFS pointer files are tiny text placeholders, not loadable Keras models.
-    # This produces a useful deployment error instead of a confusing ZIP/model error.
     with open(model_path, "rb") as model_file:
         model_header = model_file.read(128)
     if model_header.startswith(b"version https://git-lfs.github.com/spec/v1"):
         raise RuntimeError(
-            f"{model_path} is still a Git LFS pointer in this deployment. "
-            "Ensure the actual model artifact is available to Streamlit Cloud."
+            f"{model_path} is a Git LFS pointer, not model weights. "
+            "Restore the real model artifact in the Streamlit deployment."
         )
-
-    selected_model = load_model(
-        model_path,
-        compile=False
-    )
-
+    selected_model = load_model(model_path, compile=False)
     with open(class_path, "r", encoding="utf-8") as f:
         metadata = json.load(f)
-
     if not isinstance(metadata, list) or not metadata or not all(isinstance(name, str) and name.strip() for name in metadata):
-        raise ValueError("Class-name file must contain a non-empty JSON list of class names.")
-
+        raise ValueError("Class-name file must contain a non-empty JSON list.")
     output_shape = selected_model.output_shape
-    if isinstance(output_shape, list):
-        raise ValueError("This scanner supports a single-output classifier only.")
-    output_count = int(output_shape[-1])
-    if output_count != len(metadata):
+    if isinstance(output_shape, list) or int(output_shape[-1]) != len(metadata):
         raise ValueError(
-            f"Model/class mapping mismatch: model outputs {output_count} classes, "
-            f"but {class_path} contains {len(metadata)} names. "
-            "Restore the matching class-name file or retrain this model."
+            f"Model/class mapping mismatch for {model_path}: "
+            f"output shape {output_shape}, labels {len(metadata)}."
         )
-
     return selected_model, metadata
 
 
-try:
+def identify_plant_category(class_name):
+    """Map the detected crop label into the requested Plant category hierarchy."""
+    raw = str(class_name).lower()
+    crop_part = raw.split("___", 1)[0] if "___" in raw else raw
+    crop_part = crop_part.replace("_", " ").replace("(", " ").replace(")", " ")
+    crop_part = crop_part.replace(",", " ").strip()
+    first = crop_part.split()[0] if crop_part.split() else ""
+    fruit = {
+        "apple", "banana", "citrus", "orange", "guava", "mango", "papaya",
+        "grape", "blueberry", "cherry", "raspberry", "strawberry", "peach",
+        "lemon", "lime", "avocado", "pomegranate", "watermelon", "melon",
+    }
+    vegetables = {
+        "tomato", "potato", "pepper", "squash", "eggplant", "brinjal",
+        "okra", "cucumber", "cabbage", "cauliflower", "onion", "garlic",
+        "carrot", "radish", "spinach", "lettuce", "bitter", "ridge", "pumpkin",
+    }
+    crops = {"rice", "paddy", "wheat", "corn", "maize", "soybean", "sugarcane"}
+    if first in fruit:
+        return "PLANT", "FRUITS"
+    if first in vegetables:
+        return "PLANT", "VEGETABLES"
+    if first in crops or "rice" in raw or "wheat" in raw:
+        return "PLANT", "CROPS"
+    return "PLANT", "OTHER / UNMAPPED"
 
-    model, class_names = load_ai_model(
-        selected_model_path,
-        selected_class_path
+
+def predict_with_automatic_routing(image):
+    """Evaluate available specialist models and select the strongest accepted result.
+
+    Legacy model confidence scores are not calibrated across architectures.
+    This routes only among known model outputs and is not universal plant ID.
+    """
+    candidates, failures = [], []
+    for model_key, (model_path, class_path) in MODEL_OPTIONS.items():
+        try:
+            candidate_model, candidate_classes = load_ai_model(model_path, class_path)
+            candidate_image = preprocess_image(image, model_key)
+            raw, indices = get_predictions(candidate_image, candidate_model, candidate_classes)
+            assessment = assess_prediction(raw, candidate_classes, model_key, top_k=3)
+            candidates.append({
+                "model_key": model_key,
+                "model": candidate_model,
+                "class_names": candidate_classes,
+                "image_array": candidate_image,
+                "predictions": raw,
+                "top_indices": indices,
+                "assessment": assessment,
+            })
+        except Exception as exc:
+            failures.append(f"{model_key}: {exc}")
+    if not candidates:
+        raise RuntimeError("No trained classifier could be loaded. " + " | ".join(failures))
+    accepted = [item for item in candidates if item["assessment"]["accepted"]]
+    if not accepted:
+        return None, candidates, failures
+    accepted.sort(
+        key=lambda item: (item["assessment"]["confidence"], item["assessment"]["margin"]),
+        reverse=True,
     )
-
-except Exception as e:
-
-    st.error("❌ The selected AI model could not be loaded.")
-    st.error(str(e))
-    st.stop()
-
-
-if selected_model_key == "general":
-    vegetable_coverage = vegetable_class_coverage(class_names)
-    with st.expander("🥬 Vegetable leaf diseases currently supported", expanded=True):
-        st.markdown(
-            "**The existing PlantDoc 38-class model already includes these vegetable-leaf categories.** "
-            "This is existing trained coverage, not a newly trained vegetable-only model."
-        )
-        coverage_cols = st.columns(4)
-        for column, (crop, labels) in zip(coverage_cols, vegetable_coverage.items()):
-            with column:
-                st.markdown(f"**{crop}**")
-                for label in labels:
-                    st.caption("• " + label.split("___", 1)[-1].replace("_", " ").replace(",", ""))
-        st.caption(
-            "For additional vegetables such as brinjal, cucumber, okra, cabbage or cauliflower, "
-            "a labelled dataset and model retraining are required."
-        )
-
-    with st.expander("🇮🇳 India vegetable crop catalog — planned dataset coverage"):
-        st.warning(
-            "These crops are included in the project dataset roadmap. They are NOT all "
-            "trained or supported by the current 38-class PlantDoc model yet."
-        )
-        catalog_names = [item["crop"] for item in vegetable_catalog()]
-        catalog_columns = st.columns(3)
-        for index, crop_name in enumerate(catalog_names):
-            with catalog_columns[index % 3]:
-                st.caption("• " + crop_name)
+    return accepted[0], candidates, failures
 
 
 # ============================================================
@@ -489,7 +459,7 @@ def preprocess_image(image, model_key):
     return preprocess_rgb_array(array, model_key)
 
 
-def get_predictions(image_array, selected_model):
+def get_predictions(image_array, selected_model, selected_class_names=None):
 
     raw_output = selected_model.predict(image_array, verbose=0)
     raw_output = np.asarray(raw_output, dtype=np.float64)
@@ -520,10 +490,11 @@ def get_predictions(image_array, selected_model):
     else:
         predictions = predictions / np.sum(predictions)
 
-    if predictions.size != len(class_names):
+    names = selected_class_names if selected_class_names is not None else class_names
+    if predictions.size != len(names):
         raise ValueError(
             f"Prediction has {predictions.size} outputs but "
-            f"{len(class_names)} class names are configured."
+            f"{len(names)} class names are configured."
         )
 
     top_indices = np.argsort(predictions)[::-1][:3]
@@ -816,98 +787,81 @@ original_image = preview_image.copy()
 # PREPROCESS
 # ============================================================
 
-image_array = preprocess_image(
-    original_image,
-    selected_model_key
-)
-
-
 # ============================================================
-# LEAF / NON-LEAF VALIDATION
+# LEAF VALIDATION + AUTOMATIC MODEL ROUTING
 # ============================================================
 
-if selected_model_key in ("fruitleaf6", "wheat", "rice_pest", "sugarcane"):
-    # These crop-specific datasets have their own image distributions.
-    # The separate PlantDoc leaf detector can reject valid images from them,
-    # so skip that unrelated gate for these selected models.
-    leaf_probability = None
-else:
-    try:
-
-        leaf_detector, leaf_detector_classes = load_leaf_detector()
-
-        leaf_probability = get_leaf_probability(
-            image_array,
-            leaf_detector,
-            leaf_detector_classes
-        )
-
-    except Exception as detector_error:
-
-        st.error("❌ Leaf validation model could not be loaded.")
-        st.error(str(detector_error))
-        st.stop()
-
-    # Do not allow the leaf-only classifiers to run on non-leaf images.
+leaf_probability = None
+try:
+    detector_input = preprocess_image(original_image, "general")
+    leaf_detector, leaf_detector_classes = load_leaf_detector()
+    leaf_probability = get_leaf_probability(
+        detector_input, leaf_detector, leaf_detector_classes
+    )
     if leaf_probability < LEAF_DETECTOR_THRESHOLD:
-
-        st.error(
-            "🚫 NOT A LEAF — ATHARVADRISHTI cannot analyze this image as a plant leaf."
-        )
-
+        st.error("🚫 No clear plant leaf was detected in this image.")
         st.warning(
             f"Leaf detector confidence: {leaf_probability * 100:.2f}%. "
-            "Please capture or upload a clear photo containing a visible plant leaf."
+            "Upload a clear, close-up leaf image."
         )
-
-        st.markdown("### 📷 Try again with:")
-
-        tip1, tip2, tip3 = st.columns(3)
-
-        with tip1:
-            st.write("🌿 **A visible leaf**")
-            st.caption("Keep most of the leaf inside the frame.")
-
-        with tip2:
-            st.write("💡 **Good lighting**")
-            st.caption("Avoid very dark or blurry images.")
-
-        with tip3:
-            st.write("🎯 **Close framing**")
-            st.caption("Avoid objects, faces, buildings or full scenes.")
-
         st.stop()
-
-    st.success(
-        f"✅ Leaf detected — confidence {leaf_probability * 100:.2f}%"
+    st.success(f"✅ Leaf detected — confidence {leaf_probability * 100:.2f}%")
+except Exception as detector_error:
+    st.warning(
+        "Leaf validation could not run. Continuing with available plant classifiers; "
+        "results may be less reliable."
     )
+    st.caption(str(detector_error))
 
 
 # ============================================================
-# PREDICTION
+# AUTOMATIC CATEGORY + SPECIALIST MODEL SELECTION
 # ============================================================
 
-with st.spinner(
-    "🧠 ATHARVADRISHTI is analyzing the leaf..."
-):
-
-    predictions, top_indices = get_predictions(
-        image_array,
-        model
+with st.spinner("🧠 Detecting plant category and selecting the best available specialist..."):
+    selected_candidate, evaluated_candidates, model_failures = predict_with_automatic_routing(
+        original_image
     )
 
+if selected_candidate is None:
+    st.error("⚠️ No available model produced a sufficiently reliable prediction.")
+    if evaluated_candidates:
+        best_candidate = max(
+            evaluated_candidates,
+            key=lambda item: item["assessment"]["confidence"],
+        )
+        best_assessment = best_candidate["assessment"]
+        st.write(
+            f"Best unconfirmed candidate: **{clean_class_name(best_assessment['prediction'])}** "
+            f"({best_assessment['confidence']:.2f}%)"
+        )
+    st.info(
+        "No diagnosis has been issued. Some model artifacts may be missing or "
+        "unavailable in this deployment."
+    )
+    with st.expander("Model availability details"):
+        for failure in model_failures:
+            st.write("• " + failure)
+    st.stop()
 
-assessment = assess_prediction(
-    predictions,
-    class_names,
-    selected_model_key,
-    top_k=3,
-)
+model = selected_candidate["model"]
+class_names = selected_candidate["class_names"]
+image_array = selected_candidate["image_array"]
+predictions = selected_candidate["predictions"]
+top_indices = selected_candidate["top_indices"]
+assessment = selected_candidate["assessment"]
+selected_model_key = selected_candidate["model_key"]
 
 predicted_index = int(assessment["predicted_index"])
 predicted_name = clean_class_name(assessment["prediction"])
 confidence = float(assessment["confidence"])
 prediction_margin = float(assessment["margin"])
+
+main_category, plant_category = identify_plant_category(assessment["prediction"])
+st.markdown(
+    f"**Detected category:** {main_category} → {plant_category}  ·  "
+    f"**Automatically selected model:** {selected_model_key}"
+)
 
 # Save accepted and rejected outcomes with an explicit status. A rejected
 # candidate is never stored as a completed diagnosis.
