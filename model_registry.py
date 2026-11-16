@@ -55,6 +55,13 @@ MODEL_REGISTRY = {
         model_path="models/rice_pest_model.keras",
         class_names_path="models/rice_pest_class_names.json",
     ),
+    "vegetable_leaf": ModelSpec(
+        key="vegetable_leaf",
+        display_name="India Vegetable Leaf Classifier",
+        version="1.0.0",
+        model_path="models/vegetable_leaf_model.keras",
+        class_names_path="models/vegetable_leaf_class_names.json",
+    ),
 }
 
 

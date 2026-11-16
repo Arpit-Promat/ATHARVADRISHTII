@@ -73,9 +73,10 @@ def sign_up_user(name: str, email: str, phone: str, password: str) -> tuple[dict
         user = _user_dict(response.user)
         if response.session is None:
             return user, (
-                "Account created, but Supabase did not start a session. "
-                "For the temporary no-verification setup, turn off Confirm Email "
-                "in Supabase Authentication settings, then try again."
+                "Account created. Please check your email (including the spam folder) "
+                "and follow the Supabase verification link. After confirming your email, "
+                "return here and log in. If no message arrives, check the Supabase email "
+                "provider and the project's Site URL / redirect URL settings."
             )
         _remember_session(response.session)
         if user:

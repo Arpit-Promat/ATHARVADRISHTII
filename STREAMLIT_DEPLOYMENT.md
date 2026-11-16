@@ -23,7 +23,7 @@ SUPABASE_ANON_KEY = "YOUR_SUPABASE_PUBLISHABLE_OR_LEGACY_ANON_KEY"
 
 Use the publishable/anon key only. Never put a Supabase service-role or secret key in a browser-facing Streamlit app. Do not commit real secrets to Git.
 
-For immediate sign-up sessions in the current temporary workflow, turn off **Confirm email** in Supabase Authentication settings. Re-enable email confirmation before treating the app as a public production service.
+Keep **Confirm email** enabled for public deployments. Configure the Supabase email provider and redirect URLs for your deployed Streamlit app. If confirmation is enabled, signup may require the user to verify their email and then sign in; the app must not assume signup always returns an active session.
 
 ## Per-user scan history
 

@@ -15,28 +15,28 @@ The application includes:
 - Streamlit interface with authentication
 - Flask APIs for management, feedback, analytics and decision support
 
-## Dataset
+## Dataset and reproducible training
 
-The project uses the **PlantDoc dataset** as one of its underlying training/data sources. The dataset itself keeps its original name; the application and product are now branded as **ATHARVADRISHTI**.
+The root `train.py` script expects a **PlantVillage-style** directory layout. It does not read from `dataset/train/` as the previous instructions stated.
 
-Download the required dataset and place the training class folders inside:
+Place matching class folders in both locations:
 
-`dataset/train/`
-
-Example:
-
-`dataset/train/`
-```
-├── Tomato_Early_blight/
-│   ├── image1.jpg
-│   └── image2.jpg
-├── Tomato_Late_blight/
-│   └── ...
-└── Apple_Scab/
-    └── ...
+```text
+dataset/
+└── PlantVillage/
+    ├── train/
+    │   ├── Apple___Apple_scab/
+    │   ├── Apple___healthy/
+    │   └── ...
+    └── val/
+        ├── Apple___Apple_scab/
+        ├── Apple___healthy/
+        └── ...
 ```
 
-The folder name becomes the predicted class name.
+Training and validation folders must contain the same class-folder names. The script derives class indices from the training folder and checks that the validation mapping matches. It writes the resulting ordered class map to `models/class_names.json`.
+
+**Important:** the class-name JSON in the repository contains PlantVillage-style labels. Do not describe a model as trained on PlantDoc unless the actual training dataset and model provenance confirm that. Dataset names, class maps and model weights must always refer to the same training run.
 
 ## Create virtual environment
 
@@ -91,40 +91,19 @@ python predict.py path/to/leaf.jpg
 
 ## Important
 
-The repository contains the application code, but not the large PlantDoc image dataset itself. Add the required dataset under `dataset/train/` before training.
+The repository contains the application code, but not the large PlantVillage training dataset itself. Before running the root `train.py` script, add the dataset using the exact `dataset/PlantVillage/train/` and `dataset/PlantVillage/val/` layout shown above.
 
 
 ## India vegetable-leaf expansion
 
-The scanner now distinguishes the vegetable classes already trained in the PlantDoc model from the broader India-focused crop catalog. A separate MobileNetV2 training pipeline is available in `train_vegetable_leaf.py`; see [VEGETABLE_LEAF_TRAINING.md](VEGETABLE_LEAF_TRAINING.md) for dataset structure, crop scope, validation requirements and deployment steps. The dedicated model is offered in the scanner only after its trained `.keras` file and matching ordered class-name JSON are present.
+The scanner now distinguishes the vegetable classes already present in the current general classifier from the broader India-focused crop catalog. A separate MobileNetV2 training pipeline is available in `train_vegetable_leaf.py`; see [VEGETABLE_LEAF_TRAINING.md](VEGETABLE_LEAF_TRAINING.md) for dataset structure, crop scope, validation requirements and deployment steps. The dedicated model is offered in the scanner only after its trained `.keras` file and matching ordered class-name JSON are present.
 
 ## Streamlit Community Cloud deployment
 
 See [STREAMLIT_DEPLOYMENT.md](STREAMLIT_DEPLOYMENT.md) for the exact repository, branch, and main-file settings. The Streamlit entrypoint is `streamlit_app.py`; `app.py` is the separate Flask API/backend. Configure Supabase credentials in Streamlit Cloud Secrets, never in Git.
 
-## Configure Streamlit email verification
+## Streamlit authentication configuration
 
-The Streamlit-native signup flow requires email verification. SMS verification is optional; SMS-based 2FA requires Twilio credentials.
+The current Streamlit entrypoint (`streamlit_app.py`) uses **Supabase Auth** through `app_supabase_auth.py`. Configure only the Supabase project URL and publishable/legacy anon key in Streamlit Community Cloud Secrets, as documented in [STREAMLIT_DEPLOYMENT.md](STREAMLIT_DEPLOYMENT.md).
 
-In Streamlit Community Cloud, open your app's **Settings → Secrets** and add SMTP credentials. For Gmail, first enable 2-Step Verification and create a Google App Password. Never use or commit your normal Gmail password.
-
-```toml
-SMTP_HOST = "smtp.gmail.com"
-SMTP_PORT = 587
-SMTP_USERNAME = "your-gmail-address@gmail.com"
-SMTP_PASSWORD = "your-16-character-google-app-password"
-SMTP_USE_TLS = "1"
-EMAIL_FROM = "your-gmail-address@gmail.com"
-```
-
-After saving Secrets, reboot/restart the deployed app and use **Verify → Resend codes** for an existing account. Secrets are deployment settings and cannot be set through this GitHub repository.
-
-Optional SMS / SMS-based 2FA settings:
-
-```toml
-TWILIO_ACCOUNT_SID = "your-twilio-account-sid"
-TWILIO_AUTH_TOKEN = "your-twilio-auth-token"
-TWILIO_FROM_NUMBER = "+1..."
-```
-
-Do not enable `AUTH_DEV_SHOW_OTP=1` on a public deployment; it is only for local development.
+`streamlit_native_auth.py` is a separate legacy/native authentication implementation and is not used by the current Streamlit login flow. Its SMTP/Twilio settings do not configure Supabase authentication. Never commit credentials, service-role keys or SMTP passwords to Git.
