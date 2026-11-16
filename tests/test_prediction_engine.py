@@ -52,6 +52,15 @@ class PredictionEngineTests(unittest.TestCase):
         self.assertAlmostEqual(float(result.sum()), 1.0, places=6)
         self.assertGreater(float(result[0]), float(result[1]))
 
+    def test_small_top_two_margin_is_rejected(self):
+        result = assess_prediction([0.55, 0.40, 0.05], ["A", "B", "C"], "general")
+        self.assertFalse(result["accepted"])
+        self.assertEqual(result["status"], "rejected")
+        self.assertEqual(result["margin"], 15.0)
+
+    def test_vegetable_model_has_a_registered_identifier(self):
+        self.assertEqual(model_identifier("vegetable_leaf"), "vegetable_leaf@1.0.0")
+
 
 if __name__ == "__main__":
     unittest.main()
