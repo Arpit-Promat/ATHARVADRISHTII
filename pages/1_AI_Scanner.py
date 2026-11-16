@@ -1390,8 +1390,12 @@ with guide_col:
         )
 
         st.info(
-            "The highlighted region represents areas that influenced the AI model's prediction. "
-            "It should not be considered a clinically or biologically verified disease boundary."
+            (
+                "The SHAP map estimates which image regions influenced the selected model output; "
+                "it is not a verified disease boundary."
+            )
+            if shap_image is not None
+            else "No SHAP attribution map was available for this image, so no highlighted region is being claimed."
         )
 
 
