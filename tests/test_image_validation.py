@@ -20,7 +20,8 @@ class ImageValidationTests(unittest.TestCase):
 
     def test_valid_jpeg_is_accepted(self):
         image = load_validated_image(encoded_image(image_format="JPEG"), "leaf.jpg")
-        self.assertEqual(image.format, "RGB")
+        self.assertEqual(image.mode, "RGB")
+        self.assertEqual(image.size, (32, 24))
 
     def test_rejects_unsupported_extension(self):
         with self.assertRaisesRegex(ValueError, "extension"):
