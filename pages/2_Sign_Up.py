@@ -28,7 +28,9 @@ if submitted:
         st.error("Passwords do not match.")
     else:
         user, error = sign_up_user(name, email, phone, password)
-        if error:
+        if error and user:
+            st.info(error)
+        elif error:
             st.error(error)
         elif user:
             st.success("Account created successfully.")
@@ -36,6 +38,6 @@ if submitted:
 
 if st.button("Back to home", use_container_width=True):
     st.switch_page("streamlit_app.py")
-st.markdown('<div class="hint">🛡️ Authentication is handled by Supabase. Email confirmation is temporarily disabled for this setup; enable it before a public production launch.</div>', unsafe_allow_html=True)
+st.markdown('<div class="hint">🛡️ Supabase protects your account. Verify the email sent to your inbox before logging in; check spam if it does not arrive.</div>', unsafe_allow_html=True)
 st.markdown('</div>', unsafe_allow_html=True)
 
