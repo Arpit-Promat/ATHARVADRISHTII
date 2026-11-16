@@ -13,6 +13,8 @@ from decision_support import condition_family
 
 from app_supabase_auth import current_user, session_logout
 from inference_preprocessing import batch_to_uint8_rgb, preprocess_rgb_array
+from prediction_engine import assess_prediction
+from image_validation import load_validated_image
 from streamlit_scan_history import make_session_key, save_scan
 from vegetable_leaf_support import vegetable_catalog, vegetable_class_coverage
 
@@ -449,6 +451,8 @@ def get_leaf_probability(image_array, detector, detector_classes):
             verbose=0
         )[0][0]
     )
+    if not np.isfinite(raw_value) or not 0.0 <= raw_value <= 1.0:
+        raise ValueError("Leaf detector returned an invalid probability.")
 
     leaf_index = int(
         detector_classes.get("leaf", 0)
@@ -664,109 +668,7 @@ def generate_shap_heatmap(
         return None
 
 
-# ============================================================
-# FALLBACK ATTENTION MAP
-# ============================================================
-
-def create_visual_attention_map(image):
-
-    img = np.array(
-        image.convert("RGB")
-    )
-
-    resized = cv2.resize(
-        img,
-        (IMG_SIZE, IMG_SIZE)
-    )
-
-    hsv = cv2.cvtColor(
-        resized,
-        cv2.COLOR_RGB2HSV
-    )
-
-    gray = cv2.cvtColor(
-        resized,
-        cv2.COLOR_RGB2GRAY
-    )
-
-    lower_problem = np.array(
-        [5, 35, 20],
-        dtype=np.uint8
-    )
-
-    upper_problem = np.array(
-        [45, 255, 230],
-        dtype=np.uint8
-    )
-
-    color_mask = cv2.inRange(
-        hsv,
-        lower_problem,
-        upper_problem
-    )
-
-    dark_mask = cv2.inRange(
-        gray,
-        0,
-        100
-    )
-
-    mask = cv2.bitwise_or(
-        color_mask,
-        dark_mask
-    )
-
-    kernel = np.ones(
-        (5, 5),
-        np.uint8
-    )
-
-    mask = cv2.morphologyEx(
-        mask,
-        cv2.MORPH_OPEN,
-        kernel
-    )
-
-    mask = cv2.GaussianBlur(
-        mask,
-        (0, 0),
-        8
-    )
-
-    heatmap = cv2.applyColorMap(
-        mask,
-        cv2.COLORMAP_JET
-    )
-
-    heatmap = cv2.cvtColor(
-        heatmap,
-        cv2.COLOR_BGR2RGB
-    )
-
-    alpha = (
-        mask.astype(np.float32)
-        / 255.0
-    )
-
-    alpha = (
-        alpha[..., None] * 0.55
-    )
-
-    result = (
-        resized.astype(np.float32)
-        * (1 - alpha)
-        +
-        heatmap.astype(np.float32)
-        * alpha
-    )
-
-    result = np.clip(
-        result,
-        0,
-        255
-    ).astype(np.uint8)
-
-    return result
+# Heuristic colour/edge overlays are intentionally not presented as model explanations.
 
 
 # ============================================================
@@ -876,14 +778,14 @@ preview_col, submit_col = st.columns([1.4, 0.6])
 
 with preview_col:
     try:
-        preview_image = Image.open(input_file).convert("RGB")
+        preview_image = load_validated_image(input_file.getvalue(), input_file.name)
         st.image(
             preview_image,
             caption="Preview — press Analyze when you are ready.",
             width="stretch"
         )
-    except Exception:
-        st.error("❌ Could not preview this image.")
+    except Exception as image_error:
+        st.error(f"❌ Could not use this image: {image_error}")
         st.stop()
 
 with submit_col:
@@ -907,19 +809,7 @@ if not analyze_requested:
 # LOAD IMAGE
 # ============================================================
 
-try:
-
-    original_image = Image.open(
-        input_file
-    ).convert("RGB")
-
-except Exception:
-
-    st.error(
-        "❌ Could not read this image."
-    )
-
-    st.stop()
+original_image = preview_image.copy()
 
 
 # ============================================================
@@ -1007,22 +897,20 @@ with st.spinner(
     )
 
 
-predicted_index = int(
-    top_indices[0]
+assessment = assess_prediction(
+    predictions,
+    class_names,
+    selected_model_key,
+    top_k=3,
 )
 
-predicted_name = clean_class_name(
-    class_names[predicted_index]
-)
+predicted_index = int(assessment["predicted_index"])
+predicted_name = clean_class_name(assessment["prediction"])
+confidence = float(assessment["confidence"])
+prediction_margin = float(assessment["margin"])
 
-confidence = (
-    float(
-        predictions[predicted_index]
-    ) * 100
-)
-
-# Save one history record per uploaded image for authenticated users.
-# This is backend persistence only; the existing scanner UI is unchanged.
+# Save accepted and rejected outcomes with an explicit status. A rejected
+# candidate is never stored as a completed diagnosis.
 try:
     authenticated_user = current_user()
     if authenticated_user:
@@ -1036,9 +924,9 @@ try:
                 user_id=str(authenticated_user["id"]),
                 session_key=scan_session_key,
                 filename=input_file.name,
-                prediction=predicted_name,
+                prediction=predicted_name if assessment["accepted"] else None,
                 confidence=round(confidence, 2),
-                status="completed",
+                status=assessment["status"],
                 top_predictions=[
                     {
                         "rank": rank,
@@ -1050,8 +938,27 @@ try:
             )
             st.session_state["last_history_scan_key"] = scan_session_key
 except Exception:
-    # A history-storage failure must never block the AI scanner.
-    pass
+    st.warning(
+        "The analysis ran, but this scan could not be saved to your history. "
+        "Check the Supabase scan_history table and its Row Level Security policies."
+    )
+
+if not assessment["accepted"]:
+    st.error("⚠️ The model could not make a sufficiently reliable prediction.")
+    st.write(f"Best candidate: **{predicted_name}**")
+    st.write(f"Confidence: **{confidence:.2f}%** (minimum 60%)")
+    st.write(f"Top-two margin: **{prediction_margin:.2f} percentage points** (minimum 20)")
+    st.info(
+        "No disease diagnosis has been issued. Try a sharper, well-lit close-up "
+        "of one leaf, or consult an agricultural expert if symptoms persist."
+    )
+    with st.expander("View candidate scores"):
+        for item in assessment["top_predictions"]:
+            st.write(
+                f"{item['rank']}. {clean_class_name(item['class_name'])} — "
+                f"{item['confidence']:.2f}%"
+            )
+    st.stop()
 
 
 # ============================================================
@@ -1365,103 +1272,21 @@ with st.spinner(
 
 
 if shap_image is None:
-
-    explanation_image = create_visual_attention_map(
-        original_image
+    st.info(
+        "SHAP could not generate an explanation for this image/model. "
+        "No colour- or edge-based substitute is shown because it would not "
+        "represent the model's actual reasoning."
     )
-
-    explanation_type = "Visual attention map"
-
 else:
-
-    explanation_image = shap_image
-
-    explanation_type = "SHAP-based explanation"
-
-
-# ============================================================
-# SHAP IMAGE CARDS
-# ============================================================
-
-map_col1, map_col2 = st.columns(
-    2
-)
-
-
-with map_col1:
-
     with st.container(border=True):
-
-        st.markdown(
-            "### 🔥 AI Attention Map"
-        )
-
+        st.markdown("### 🔥 SHAP model explanation")
         st.caption(
-            "Red/yellow regions indicate stronger model influence."
+            "This attribution map estimates which image regions influenced the selected model output."
         )
-
-        st.image(
-            explanation_image,
-            use_container_width=True
-        )
-
-
-with map_col2:
-
-    with st.container(border=True):
-
-        st.markdown(
-            "### 🎯 Important / Suspected Regions"
-        )
-
-        st.caption(
-            "Highlighted areas represent visually important regions."
-        )
-
-        original_np = np.array(
-            original_image.resize(
-                (IMG_SIZE, IMG_SIZE)
-            )
-        )
-
-        # Create highlighted-region visualization
-        gray = cv2.cvtColor(
-            original_np,
-            cv2.COLOR_RGB2GRAY
-        )
-
-        edges = cv2.Canny(
-            gray,
-            60,
-            140
-        )
-
-        edges = cv2.dilate(
-            edges,
-            np.ones((3, 3), np.uint8),
-            iterations=1
-        )
-
-        highlighted = original_np.copy()
-
-        highlighted[
-            edges > 0
-        ] = [255, 40, 40]
-
-        st.image(
-            highlighted,
-            use_container_width=True
-        )
-
-
-st.caption(
-    f"{explanation_type} — red/yellow regions represent areas receiving stronger visual importance."
-)
-
-
-st.warning(
-    "⚠️ Highlighted areas are an AI explanation, not an exact biological measurement of infected area."
-)
+        st.image(shap_image, use_container_width=True)
+    st.warning(
+        "SHAP is a model-attribution method, not a verified disease boundary or measurement of infection severity."
+    )
 
 
 # ============================================================
@@ -1497,7 +1322,11 @@ with explain_col:
 
             (
                 "Important regions",
-                "The red/yellow regions indicate areas that had stronger visual influence on the model prediction."
+                (
+                    "The SHAP attribution map estimates influential image regions."
+                    if shap_image is not None
+                    else "No model-attribution map was available for this prediction."
+                )
             ),
 
             (
@@ -1543,37 +1372,15 @@ with guide_col:
 
     with st.container(border=True):
 
-        st.markdown(
-            "### 🎨 How to Read the AI Map"
-        )
-
-        st.markdown(
-            "🔴 **Red**"
-        )
-
-        st.caption(
-            "Strong model attention / highly influential region."
-        )
-
-        st.divider()
-
-        st.markdown(
-            "🟡 **Yellow**"
-        )
-
-        st.caption(
-            "Medium-to-high model attention."
-        )
-
-        st.divider()
-
-        st.markdown(
-            "🔵 **Blue**"
-        )
-
-        st.caption(
-            "Lower contribution to the selected prediction."
-        )
+        st.markdown("### 🎨 How to Read the SHAP Map")
+        if shap_image is not None:
+            st.markdown("🔴 **Red / yellow**")
+            st.caption("Stronger positive or negative attribution magnitude in this visualization; interpretation depends on the SHAP output and colour scale.")
+            st.divider()
+            st.markdown("🔵 **Blue**")
+            st.caption("Lower displayed attribution magnitude. Colours are not disease severity.")
+        else:
+            st.info("A colour legend is unavailable because no SHAP map was generated.")
 
 
     with st.container(border=True):
