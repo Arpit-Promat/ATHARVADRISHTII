@@ -1,5 +1,6 @@
 ﻿import streamlit as st
 import json
+import hashlib
 from pathlib import Path
 import numpy as np
 import cv2
@@ -799,7 +800,17 @@ with submit_col:
         key="analyze_leaf_image",
     )
 
-if not analyze_requested:
+# Streamlit reruns the page whenever a triage selectbox changes. Keep the
+# completed analysis associated with the exact image + model so those reruns
+# can redraw the results instead of returning to the upload step.
+analysis_signature = hashlib.sha256(
+    input_file.getvalue() + selected_model_key.encode("utf-8")
+).hexdigest()
+
+if analyze_requested:
+    st.session_state["scanner_analyzed_signature"] = analysis_signature
+
+if st.session_state.get("scanner_analyzed_signature") != analysis_signature:
     st.info(
         "✅ Image selected. Press **🧠 Analyze Image** to start leaf validation and disease analysis."
     )
@@ -1308,16 +1319,19 @@ st.markdown(
 )
 
 
-with st.spinner(
-    "🔎 Generating AI explanation..."
-):
+# SHAP is expensive; reuse the explanation for this exact image/model
+# across Streamlit widget reruns.
+shap_cache_key = f"scanner_shap_{analysis_signature}"
+if shap_cache_key not in st.session_state:
+    with st.spinner("🔎 Generating AI explanation..."):
+        st.session_state[shap_cache_key] = generate_shap_heatmap(
+            image_array,
+            predicted_index,
+            model,
+            class_names,
+        )
 
-    shap_image = generate_shap_heatmap(
-        image_array,
-        predicted_index,
-        model,
-        class_names,
-    )
+shap_image = st.session_state[shap_cache_key]
 
 
 if shap_image is None:
