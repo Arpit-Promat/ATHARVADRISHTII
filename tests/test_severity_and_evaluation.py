@@ -46,7 +46,7 @@ class EvaluationTests(unittest.TestCase):
         self.assertIn("potato", report["per_crop"])
 
     def test_duplicate_image_ids_are_rejected(self):
-        csv_text = "image_id,true_label,predicted_label,crop,split,confidence,accepted\\n1,A,A,tomato,test,0.9,true\\n1,A,A,tomato,test,0.8,true\\n"
+        csv_text = "image_id,true_label,predicted_label,crop,split,confidence,accepted\n1,A,A,tomato,test,0.9,true\n1,A,A,tomato,test,0.8,true\n"
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder) / "predictions.csv"
             path.write_text(csv_text, encoding="utf-8")
