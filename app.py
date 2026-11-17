@@ -18,6 +18,7 @@ from phase10_api import register_phase10_routes
 from model_registry import get_model_spec, model_identifier
 from observability import log_event, timed_event
 from prediction_engine import assess_prediction
+from inference_preprocessing import preprocess_rgb_array
 
 
 app = Flask(__name__)
@@ -59,7 +60,7 @@ LEAF_DETECTOR_THRESHOLD = 0.5
 ALLOWED_PLANT_TYPES = {"general", "mango", "fruitleaf6", "wheat", "rice-pest", "sugarcane"}
 
 
-@lru_cache(maxsize=None)
+@lru_cache(maxsize=3)
 def load_registered_model_and_classes(model_key):
     """Load an additional registered classifier only when it is selected."""
     spec = get_model_spec(model_key)
@@ -261,11 +262,9 @@ def index():
                         arr = image.img_to_array(img) / 255.0
                         input_image = np.expand_dims(arr.astype(np.float32), axis=0)
                     else:
-                        img = image.load_img(original_path, target_size=(224, 224))
-                        arr = image.img_to_array(img) / 255.0
-                        input_image = np.expand_dims(arr, axis=0)
-                    if selected_plant_type in {"wheat", "rice-pest"}:
-                        input_image = input_image * 255.0
+                        img = image.load_img(original_path, target_size=(224, 224), color_mode="rgb")
+                        raw_rgb = image.img_to_array(img)
+                        input_image = preprocess_rgb_array(raw_rgb, model_key)
 
                     # FruitLeaf6 includes fruit as well as leaf classes, so it
                     # must not be blocked by the leaf-only image detector.
@@ -273,7 +272,8 @@ def index():
                         is_leaf = True
                         leaf_probability = None
                     else:
-                        is_leaf, leaf_probability_value = is_leaf_image(input_image)
+                        detector_input = input_image if selected_plant_type in {"fruitleaf6", "wheat", "rice-pest"} else input_image
+                        is_leaf, leaf_probability_value = is_leaf_image(detector_input)
                         leaf_probability = round(float(leaf_probability_value) * 100, 2)
 
                     if not is_leaf:
@@ -345,7 +345,10 @@ def index():
                                     "The highlighted regions help identify which visible leaf features influenced the classification.",
                                     "This explanation improves model transparency by showing why the AI reached its prediction instead of only giving the final disease name.",
                                 ]
-                                shap_image = generate_shap(model, class_names, input_image, idx)
+                                # SHAP overlay expects display-scaled RGB [0, 1], regardless
+                                # of the model's internal preprocessing contract.
+                                shap_input = np.expand_dims(raw_rgb.astype(np.float32) / 255.0, axis=0)
+                                shap_image = generate_shap(model, class_names, shap_input, idx)
 
                 except Exception as exc:
                     log_event("prediction.error", error_type=type(exc).__name__)

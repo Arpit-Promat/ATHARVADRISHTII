@@ -36,6 +36,7 @@ def predict_scan(self, scan_id):
     from app import app as flask_app, get_model_and_classes, is_leaf_image
     from database import Scan, db
     from prediction_engine import assess_prediction
+    from inference_preprocessing import preprocess_rgb_array
 
     with flask_app.app_context():
         scan = db.session.get(Scan, int(scan_id))
@@ -47,14 +48,14 @@ def predict_scan(self, scan_id):
 
         try:
             model, class_names = get_model_and_classes(scan.plant_type)
-            model_key = "mango" if scan.plant_type == "mango" else "general"
             if not scan.image_path:
                 raise ValueError("Missing scan image path")
 
             file_path = os.path.join(flask_app.root_path, scan.image_path.lstrip("/"))
-            img = image.load_img(file_path, target_size=(224, 224))
-            arr = image.img_to_array(img) / 255.0
-            input_image = np.expand_dims(arr, axis=0)
+            img = image.load_img(file_path, target_size=(224, 224), color_mode="rgb")
+            raw_rgb = image.img_to_array(img)
+            model_key = "mango" if scan.plant_type == "mango" else "general"
+            input_image = preprocess_rgb_array(raw_rgb, model_key)
 
             is_leaf, leaf_probability = is_leaf_image(input_image)
             scan.leaf_probability = round(float(leaf_probability) * 100, 2)
