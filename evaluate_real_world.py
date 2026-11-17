@@ -34,6 +34,22 @@ def _metrics(rows: list[dict[str, str]]) -> dict:
     accepted = [r for r in rows if r["accepted"] == "true"]
     correct = sum(r["predicted_label"] == r["true_label"] for r in accepted)
     total = len(rows)
+    confusion = {
+        actual: {
+            predicted: sum(
+                r["true_label"] == actual
+                and r["accepted"] == "true"
+                and r["predicted_label"] == predicted
+                for r in rows
+            )
+            for predicted in labels
+        }
+        for actual in labels
+    }
+    weighted_f1 = _safe_div(
+        sum(item["f1"] * item["support"] for item in result.values()),
+        sum(item["support"] for item in result.values()),
+    )
     return {
         "images": total,
         "accepted": len(accepted),
@@ -42,6 +58,9 @@ def _metrics(rows: list[dict[str, str]]) -> dict:
         "selective_accuracy": _safe_div(correct, len(accepted)),
         "end_to_end_correct_rate": _safe_div(correct, total),
         "macro_f1_including_rejected_as_misses": _safe_div(sum(f1_values), len(f1_values)),
+        "weighted_f1_including_rejected_as_misses": weighted_f1,
+        "confusion_matrix_accepted_predictions": confusion,
+        "confusion_matrix_labels": labels,
         "per_class": result,
     }
 
