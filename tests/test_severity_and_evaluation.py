@@ -38,8 +38,20 @@ class EvaluationTests(unittest.TestCase):
             report = evaluate(str(path))
         self.assertEqual(report["overall"]["images"], 3)
         self.assertEqual(report["overall"]["rejected"], 1)
+        self.assertAlmostEqual(report["overall"]["coverage"], 2 / 3)
+        self.assertAlmostEqual(report["overall"]["selective_accuracy"], 0.5)
+        self.assertAlmostEqual(report["overall"]["end_to_end_correct_rate"], 1 / 3)
+        self.assertIn("confusion_matrix_accepted_predictions", report["overall"])
         self.assertIn("tomato", report["per_crop"])
         self.assertIn("potato", report["per_crop"])
+
+    def test_duplicate_image_ids_are_rejected(self):
+        csv_text = "image_id,true_label,predicted_label,crop,split,confidence,accepted\\n1,A,A,tomato,test,0.9,true\\n1,A,A,tomato,test,0.8,true\\n"
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "predictions.csv"
+            path.write_text(csv_text, encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "Duplicate image_id"):
+                evaluate(str(path))
 
 
 if __name__ == "__main__":
