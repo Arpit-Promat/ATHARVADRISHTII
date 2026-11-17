@@ -140,7 +140,7 @@ def _record_scan_from_request(sender, template, context, **extra):
         error = context.get("error")
         plant_type = context.get("selected_plant_type", "general")
         current_user = getattr(request, "current_user", None)
-        model_key = "mango" if plant_type == "mango" else "general"
+        model_key = {"mango": "mango", "fruitleaf6": "fruitleaf6", "wheat": "wheat", "rice-pest": "rice_pest", "sugarcane": "sugarcane_healthy"}.get(plant_type, "general")
         scan = Scan(
             user_id=current_user.id if current_user else None,
             original_filename=filename,
@@ -205,7 +205,8 @@ def _register_api_routes(app):
         if not valid:
             return jsonify({"error": result}), 400
 
-        upload_folder = os.path.join(app.root_path, "static", "uploads")
+        from media_storage import private_media_dir
+        upload_folder = private_media_dir(app.root_path)
         os.makedirs(upload_folder, exist_ok=True)
         extension = result.rsplit(".", 1)[-1].lower()
         unique_name = f"{uuid.uuid4().hex}.{extension}"
@@ -216,7 +217,7 @@ def _register_api_routes(app):
         scan = Scan(
             user_id=request.current_user.id,
             original_filename=result,
-            image_path=f"/static/uploads/{unique_name}",
+            image_path=f"instance/private_media/{unique_name}",
             plant_type=plant_type,
             prediction_status="queued",
         )
