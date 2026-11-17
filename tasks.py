@@ -33,6 +33,7 @@ def predict_scan(self, scan_id):
     """Run a queued scan through the shared prediction engine."""
     import numpy as np
     from tensorflow.keras.preprocessing import image
+    from PIL import Image
     from app import app as flask_app, get_model_and_classes, is_leaf_image
     from database import Scan, db
     from prediction_engine import assess_prediction
@@ -52,12 +53,16 @@ def predict_scan(self, scan_id):
                 raise ValueError("Missing scan image path")
 
             file_path = os.path.join(flask_app.root_path, scan.image_path.lstrip("/"))
-            img = image.load_img(file_path, target_size=(224, 224), color_mode="rgb")
-            raw_rgb = image.img_to_array(img)
-            model_key = "mango" if scan.plant_type == "mango" else "general"
+            img = Image.open(file_path).convert("RGB").resize((224, 224))
+            raw_rgb = np.asarray(img, dtype=np.float32)
+            model_key = {"mango": "mango", "fruitleaf6": "fruitleaf6", "wheat": "wheat", "rice-pest": "rice_pest"}.get(scan.plant_type, "general")
             input_image = preprocess_rgb_array(raw_rgb, model_key)
 
-            is_leaf, leaf_probability = is_leaf_image(input_image)
+            if scan.plant_type in {"fruitleaf6", "wheat", "rice-pest"}:
+                is_leaf, leaf_probability = True, 1.0
+            else:
+                detector_input = preprocess_rgb_array(raw_rgb, "general")
+                is_leaf, leaf_probability = is_leaf_image(detector_input)
             scan.leaf_probability = round(float(leaf_probability) * 100, 2)
 
             if not is_leaf:

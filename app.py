@@ -5,7 +5,7 @@ from functools import lru_cache
 
 import numpy as np
 
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, abort, jsonify, render_template, request, send_from_directory, url_for
 from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing import image
 
@@ -19,6 +19,7 @@ from model_registry import get_model_spec, model_identifier
 from observability import log_event, timed_event
 from prediction_engine import assess_prediction
 from inference_preprocessing import preprocess_rgb_array
+from media_storage import create_media_token, private_media_dir, resolve_media_token
 
 
 app = Flask(__name__)
@@ -30,6 +31,14 @@ register_phase9_routes(app)
 register_phase10_routes(app)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+
+@app.get("/private-media/<token>")
+def private_media(token):
+    filename = resolve_media_token(token, app.config["SECRET_KEY"])
+    if not filename:
+        abort(404)
+    return send_from_directory(private_media_dir(BASE_DIR), filename, conditional=True)
 
 GENERAL_SPEC = get_model_spec("general")
 GENERAL_MODEL_PATH = os.path.join(BASE_DIR, GENERAL_SPEC.model_path)
@@ -201,11 +210,12 @@ def generate_shap(model, class_names, img_arr, predicted_index):
     original = np.uint8(img_arr[0] * 255)
     overlay = cv2.addWeighted(original, 0.60, heatmap_color, 0.40, 0)
 
-    os.makedirs(os.path.join(BASE_DIR, "static"), exist_ok=True)
-    shap_path = os.path.join(BASE_DIR, "static", "shap_output.jpg")
+    os.makedirs(private_media_dir(BASE_DIR), exist_ok=True)
+    shap_filename = f"shap_{uuid.uuid4().hex}.jpg"
+    shap_path = os.path.join(private_media_dir(BASE_DIR), shap_filename)
     cv2.imwrite(shap_path, cv2.cvtColor(overlay, cv2.COLOR_RGB2BGR))
     print("SHAP explanation saved.")
-    return "/static/shap_output.jpg"
+    return url_for("private_media", token=create_media_token(shap_filename, app.config["SECRET_KEY"]))
 
 
 @app.route("/", methods=["GET", "POST"])
@@ -247,7 +257,7 @@ def index():
                     else:
                         model, class_names = get_model_and_classes(selected_plant_type)
                         model_key = get_model_key(selected_plant_type)
-                    upload_folder = os.path.join(BASE_DIR, "static", "uploads")
+                    upload_folder = private_media_dir(BASE_DIR)
                     os.makedirs(upload_folder, exist_ok=True)
 
                     safe_name = validation_result
@@ -272,7 +282,7 @@ def index():
                         is_leaf = True
                         leaf_probability = None
                     else:
-                        detector_input = input_image if selected_plant_type in {"fruitleaf6", "wheat", "rice-pest"} else input_image
+                        detector_input = preprocess_rgb_array(raw_rgb, "general")
                         is_leaf, leaf_probability_value = is_leaf_image(detector_input)
                         leaf_probability = round(float(leaf_probability_value) * 100, 2)
 
@@ -281,7 +291,7 @@ def index():
                         print("Rejected by leaf detector — not a leaf image.")
                         error = "This doesn't look like a leaf. Please upload a clear photo of a plant leaf."
                     else:
-                        original_image = f"/static/uploads/{unique_name}"
+                        original_image = url_for("private_media", token=create_media_token(unique_name, app.config["SECRET_KEY"]))
                         if selected_plant_type == "sugarcane":
                             reconstructed = model.predict(input_image, verbose=0)
                             anomaly_error = float(np.mean(np.square(input_image - reconstructed)))
@@ -291,7 +301,7 @@ def index():
                             top_predictions = []
                             confidence_level = None
                             confidence_label = "Healthy-image similarity check"
-                            original_image = f"/static/uploads/{unique_name}"
+                            original_image = url_for("private_media", token=create_media_token(unique_name, app.config["SECRET_KEY"]))
                             ai_explanation = [
                                 f"Reconstruction error: {anomaly_error:.6f} (healthy-image threshold: {anomaly_threshold:.6f}).",
                                 "This model learns the appearance of healthy sugarcane leaves; it does not identify disease names.",
