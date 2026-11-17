@@ -59,7 +59,7 @@ LEAF_DETECTOR_THRESHOLD = 0.5
 ALLOWED_PLANT_TYPES = {"general", "mango", "fruitleaf6", "wheat", "rice-pest", "sugarcane"}
 
 
-@lru_cache(maxsize=None)
+@lru_cache(maxsize=3)
 def load_registered_model_and_classes(model_key):
     """Load an additional registered classifier only when it is selected."""
     spec = get_model_spec(model_key)
@@ -264,7 +264,7 @@ def index():
                         img = image.load_img(original_path, target_size=(224, 224))
                         arr = image.img_to_array(img) / 255.0
                         input_image = np.expand_dims(arr, axis=0)
-                    if selected_plant_type in {"wheat", "rice-pest"}:
+                    if selected_plant_type in {"fruitleaf6", "wheat", "rice-pest"}:
                         input_image = input_image * 255.0
 
                     # FruitLeaf6 includes fruit as well as leaf classes, so it
