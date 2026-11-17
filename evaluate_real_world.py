@@ -74,10 +74,21 @@ def evaluate(path: str, split: str = "test") -> dict:
     selected = [r for r in rows if r["split"].strip().lower() == split.lower()]
     if not selected:
         raise ValueError(f"No rows found for split={split!r}")
+    seen_ids = set()
     for row in selected:
+        for field in ("image_id", "true_label", "crop"):
+            if not row[field].strip():
+                raise ValueError(f"{field} must not be empty")
+        image_id = row["image_id"].strip()
+        if image_id in seen_ids:
+            raise ValueError(f"Duplicate image_id in selected split: {image_id!r}")
+        seen_ids.add(image_id)
         if row["accepted"].strip().lower() not in {"true", "false"}:
             raise ValueError("accepted must be true or false")
         row["accepted"] = row["accepted"].strip().lower()
+        row["predicted_label"] = row["predicted_label"].strip()
+        if row["accepted"] == "true" and not row["predicted_label"]:
+            raise ValueError("predicted_label must not be empty for accepted predictions")
         try:
             confidence = float(row["confidence"])
         except (TypeError, ValueError):
