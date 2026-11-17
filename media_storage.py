@@ -6,7 +6,7 @@ import re
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 
 TOKEN_SALT = "atharvadrishti-private-media-v1"
-_SAFE_NAME = re.compile(r"^[a-zA-Z0-9_-]{1,100}\\.(?:jpg|jpeg|png|webp)$")
+_SAFE_NAME = re.compile(r"^[a-zA-Z0-9_-]{1,100}\.(?:jpg|jpeg|png|webp)$")
 
 
 def private_media_dir(app_root: str) -> str:
