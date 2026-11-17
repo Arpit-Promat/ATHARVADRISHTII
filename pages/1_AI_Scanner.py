@@ -10,6 +10,7 @@ from tensorflow.keras.models import load_model
 
 from disease_guidance import get_disease_guidance
 from decision_support import condition_family
+from severity_engine import assess_observed_severity, build_safe_action_guidance
 
 from app_supabase_auth import current_user, session_logout
 from inference_preprocessing import batch_to_uint8_rgb, preprocess_rgb_array
@@ -1239,6 +1240,48 @@ with info_col2:
 
 if guidance.get("note"):
     st.info(f"ℹ️ {guidance['note']}")
+# ============================================================
+# FIELD OBSERVATION SEVERITY + SAFE ACTIONS
+# ============================================================
+
+st.write("")
+st.markdown(
+    '<div class="section-title">🩺 Field Observation & Severity Triage</div>',
+    unsafe_allow_html=True
+)
+st.caption(
+    "This section uses your field observations only. It does not use AI confidence or SHAP, "
+    "and it does not estimate an infected-area percentage."
+)
+with st.expander("Record what you observe in the field", expanded=False):
+    extent = st.selectbox(
+        "How much of the plant/field appears affected?",
+        ["none", "few_leaves", "several_leaves", "many_leaves_or_multiple_plants"],
+        format_func=lambda value: {"none": "No visible symptoms reported", "few_leaves": "A few leaves", "several_leaves": "Several leaves on a plant", "many_leaves_or_multiple_plants": "Many leaves or multiple plants"}[value],
+        key="field_symptom_extent",
+    )
+    spread = st.selectbox(
+        "How widely have symptoms spread?",
+        ["not_spreading_or_unknown", "one_plant", "nearby_plants", "multiple_rows_or_area"],
+        format_func=lambda value: {"not_spreading_or_unknown": "Not spreading / unknown", "one_plant": "One plant", "nearby_plants": "Nearby plants", "multiple_rows_or_area": "Multiple rows or a wider area"}[value],
+        key="field_spread",
+    )
+    impact = st.selectbox(
+        "What is the visible impact on the plant?",
+        ["no_obvious_impact", "minor_growth_change", "reduced_growth_or_yield_concern", "wilting_or_major_functional_decline"],
+        format_func=lambda value: {"no_obvious_impact": "No obvious impact", "minor_growth_change": "Minor growth change", "reduced_growth_or_yield_concern": "Reduced growth / yield concern", "wilting_or_major_functional_decline": "Wilting or major decline"}[value],
+        key="field_plant_impact",
+    )
+    field_assessment = assess_observed_severity(extent, spread, impact)
+    st.markdown(f"**Observation triage:** {field_assessment['label']}")
+    st.caption(f"Review priority: {field_assessment['priority'].replace('_', ' ').title()}")
+    st.warning("This is an ordinal field-observation category, not a biological severity score, diagnosis, or percentage of infected tissue.")
+    safe_guidance = build_safe_action_guidance(predicted_name, field_assessment)
+    st.markdown("**Suggested safe next steps**")
+    for action in safe_guidance["actions"]:
+        st.markdown(f"- {action}")
+    st.caption(safe_guidance["note"])
+
 
 # ============================================================
 # EXPLAINABLE AI
