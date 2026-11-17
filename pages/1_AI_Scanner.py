@@ -1,4 +1,4 @@
-﻿import streamlit as st
+import streamlit as st
 import json
 import hashlib
 from pathlib import Path
@@ -13,7 +13,8 @@ from disease_guidance import get_disease_guidance
 from decision_support import condition_family
 from severity_engine import assess_observed_severity, build_safe_action_guidance
 
-from app_supabase_auth import current_user, session_logout
+from app_supabase_auth import current_user, is_authenticated, session_logout
+from model_artifacts import ensure_model_artifact
 from inference_preprocessing import batch_to_uint8_rgb, preprocess_rgb_array
 from prediction_engine import assess_prediction
 from image_validation import load_validated_image
@@ -31,6 +32,14 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="collapsed"
 )
+
+if not is_authenticated():
+    st.warning("Please log in to use the AI Scanner.")
+    if st.button("Go to Login", type="primary"):
+        st.switch_page("pages/1_Login.py")
+    if st.button("Back to Home"):
+        st.switch_page("streamlit_app.py")
+    st.stop()
 
 
 # ============================================================
@@ -267,7 +276,7 @@ with nav_logout:
 # ============================================================
 
 MODEL_OPTIONS = {
-    "PlantDoc — General & Vegetable Leaf Classifier (38 classes)": (
+    "General Leaf Classifier (38 classes) — PlantVillage-style class map": (
         "models/plantdoc_model.keras",
         "models/class_names.json",
         "general",
@@ -315,18 +324,12 @@ selected_model_label = st.selectbox(
 )
 selected_model_path, selected_class_path, selected_model_key = MODEL_OPTIONS[selected_model_label]
 
-@st.cache_resource
+@st.cache_resource(max_entries=1)
 def load_ai_model(model_path, class_path):
 
     # Git LFS pointer files are tiny text placeholders, not loadable Keras models.
     # This produces a useful deployment error instead of a confusing ZIP/model error.
-    with open(model_path, "rb") as model_file:
-        model_header = model_file.read(128)
-    if model_header.startswith(b"version https://git-lfs.github.com/spec/v1"):
-        raise RuntimeError(
-            f"{model_path} is still a Git LFS pointer in this deployment. "
-            "Ensure the actual model artifact is available to Streamlit Cloud."
-        )
+    ensure_model_artifact(model_path)
 
     selected_model = load_model(
         model_path,
@@ -371,7 +374,7 @@ if selected_model_key == "general":
     vegetable_coverage = vegetable_class_coverage(class_names)
     with st.expander("🥬 Vegetable leaf diseases currently supported", expanded=True):
         st.markdown(
-            "**The existing PlantDoc 38-class model already includes these vegetable-leaf categories.** "
+            "**The current 38-class general model includes these vegetable-leaf categories in its class map.** "
             "This is existing trained coverage, not a newly trained vegetable-only model."
         )
         coverage_cols = st.columns(4)
@@ -388,7 +391,7 @@ if selected_model_key == "general":
     with st.expander("🇮🇳 India vegetable crop catalog — planned dataset coverage"):
         st.warning(
             "These crops are included in the project dataset roadmap. They are NOT all "
-            "trained or supported by the current 38-class PlantDoc model yet."
+            "trained or supported by the current 38-class general model yet."
         )
         catalog_names = [item["crop"] for item in vegetable_catalog()]
         catalog_columns = st.columns(3)
@@ -413,9 +416,10 @@ LEAF_DETECTOR_THRESHOLD = 0.65
 # HELPER FUNCTIONS
 # ============================================================
 
-@st.cache_resource
+@st.cache_resource(max_entries=1)
 def load_leaf_detector():
 
+    ensure_model_artifact("models/leaf_detector_model.keras")
     detector = load_model(
         "models/leaf_detector_model.keras",
         compile=False
@@ -810,6 +814,15 @@ analysis_signature = hashlib.sha256(
 if analyze_requested:
     st.session_state["scanner_analyzed_signature"] = analysis_signature
 
+previous_triage_signature = st.session_state.get("scanner_triage_signature")
+if previous_triage_signature != analysis_signature:
+    for triage_key in ("field_symptom_extent", "field_spread", "field_plant_impact"):
+        st.session_state.pop(triage_key, None)
+    for cache_key in list(st.session_state.keys()):
+        if cache_key.startswith(("scanner_leaf_", "scanner_prediction_", "scanner_shap_")):
+            st.session_state.pop(cache_key, None)
+    st.session_state["scanner_triage_signature"] = analysis_signature
+
 if st.session_state.get("scanner_analyzed_signature") != analysis_signature:
     st.info(
         "✅ Image selected. Press **🧠 Analyze Image** to start leaf validation and disease analysis."
@@ -838,24 +851,25 @@ image_array = preprocess_image(
 # LEAF / NON-LEAF VALIDATION
 # ============================================================
 
+leaf_cache_key = f"scanner_leaf_{analysis_signature}"
 if selected_model_key in ("fruitleaf6", "wheat", "rice_pest", "sugarcane"):
     # These crop-specific datasets have their own image distributions.
-    # The separate PlantDoc leaf detector can reject valid images from them,
-    # so skip that unrelated gate for these selected models.
+    # The general leaf detector is not calibrated for these model families.
     leaf_probability = None
+    st.session_state[leaf_cache_key] = None
 else:
     try:
-
-        leaf_detector, leaf_detector_classes = load_leaf_detector()
-
-        leaf_probability = get_leaf_probability(
-            image_array,
-            leaf_detector,
-            leaf_detector_classes
-        )
-
+        if leaf_cache_key in st.session_state:
+            leaf_probability = st.session_state[leaf_cache_key]
+        else:
+            leaf_detector, leaf_detector_classes = load_leaf_detector()
+            leaf_probability = get_leaf_probability(
+                image_array,
+                leaf_detector,
+                leaf_detector_classes
+            )
+            st.session_state[leaf_cache_key] = leaf_probability
     except Exception as detector_error:
-
         st.error("❌ Leaf validation model could not be loaded.")
         st.error(str(detector_error))
         st.stop()
@@ -899,22 +913,19 @@ else:
 # PREDICTION
 # ============================================================
 
-with st.spinner(
-    "🧠 ATHARVADRISHTI is analyzing the leaf..."
-):
-
-    predictions, top_indices = get_predictions(
-        image_array,
-        model
+prediction_cache_key = f"scanner_prediction_{analysis_signature}"
+if prediction_cache_key in st.session_state:
+    predictions, top_indices, assessment = st.session_state[prediction_cache_key]
+else:
+    with st.spinner("🧠 ATHARVADRISHTI is analyzing the leaf..."):
+        predictions, top_indices = get_predictions(image_array, model)
+    assessment = assess_prediction(
+        predictions,
+        class_names,
+        selected_model_key,
+        top_k=3,
     )
-
-
-assessment = assess_prediction(
-    predictions,
-    class_names,
-    selected_model_key,
-    top_k=3,
-)
+    st.session_state[prediction_cache_key] = (predictions, top_indices, assessment)
 
 predicted_index = int(assessment["predicted_index"])
 predicted_name = clean_class_name(assessment["prediction"])
