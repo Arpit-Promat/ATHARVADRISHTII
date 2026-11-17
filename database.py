@@ -140,7 +140,7 @@ def _record_scan_from_request(sender, template, context, **extra):
         error = context.get("error")
         plant_type = context.get("selected_plant_type", "general")
         current_user = getattr(request, "current_user", None)
-        model_key = {"mango": "mango", "fruitleaf6": "fruitleaf6", "wheat": "wheat", "rice-pest": "rice_pest", "sugarcane": "sugarcane_healthy"}.get(plant_type, "general")
+        model_key = {"mango": "mango", "fruitleaf6": "fruitleaf6", "wheat": "wheat", "rice-pest": "rice_pest", "sugarcane": "general"}.get(plant_type, "general")
         scan = Scan(
             user_id=current_user.id if current_user else None,
             original_filename=filename,
