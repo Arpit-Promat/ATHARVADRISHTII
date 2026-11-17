@@ -122,7 +122,15 @@ def get_authenticated_client() -> Client:
     if not access_token or not refresh_token:
         raise RuntimeError("Your login session has expired. Please log in again.")
     try:
-        client.auth.set_session(access_token, refresh_token)
+        auth_response = client.auth.set_session(access_token, refresh_token)
+        # Supabase rotates refresh tokens. Persist the new pair immediately so
+        # a later Streamlit rerun does not reuse a consumed refresh token.
+        refreshed_session = getattr(auth_response, "session", None)
+        if refreshed_session is None:
+            refreshed_session = client.auth.get_session()
+            refreshed_session = getattr(refreshed_session, "session", refreshed_session)
+        if refreshed_session is not None:
+            _remember_session(refreshed_session)
     except Exception as exc:
         session_logout()
         raise RuntimeError("Your login session has expired. Please log in again.") from exc
@@ -153,6 +161,7 @@ def is_authenticated() -> bool:
         st.session_state.get("authenticated")
         and st.session_state.get("auth_user_id")
         and st.session_state.get("supabase_access_token")
+        and st.session_state.get("supabase_refresh_token")
     )
 
 

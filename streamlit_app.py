@@ -1,4 +1,4 @@
-﻿import streamlit as st
+import streamlit as st
 from app_supabase_auth import authenticate, current_user, is_authenticated, session_login, session_logout
 
 st.set_page_config(
@@ -283,8 +283,8 @@ with left:
     st.markdown('<div class="hero-text">ATHARVADRISHTI — An Intelligent and Explainable Plant Health Analysis System uses advanced AI to analyze plant health, explain visual evidence and help users make better crop-health decisions.</div>', unsafe_allow_html=True)
     m1, m2, m3 = st.columns(3)
     with m1: st.markdown('<div class="mini-feature"><b>🌿</b><span>Detect Diseases<br>with AI</span></div>', unsafe_allow_html=True)
-    with m2: st.markdown('<div class="mini-feature"><b>🛡</b><span>Get Expert<br>Guidance</span></div>', unsafe_allow_html=True)
-    with m3: st.markdown('<div class="mini-feature"><b>↗</b><span>Improve Yield<br>&amp; Productivity</span></div>', unsafe_allow_html=True)
+    with m2: st.markdown('<div class="mini-feature"><b>🛡</b><span>Review Safe<br>Next Steps</span></div>', unsafe_allow_html=True)
+    with m3: st.markdown('<div class="mini-feature"><b>↗</b><span>Track Plant<br>Health Scans</span></div>', unsafe_allow_html=True)
     st.write("")
     b1, b2 = st.columns(2)
     with b1:
@@ -331,7 +331,7 @@ with l1:
 with l2:
     if st.button("Sign Up", use_container_width=True, key="landing_signup"):
         st.switch_page("pages/2_Sign_Up.py")
-st.markdown('<div class="security-note">🛡️ Supabase Auth · Secure login sessions · Private scan history</div>', unsafe_allow_html=True)
+st.markdown('<div class="security-note">🛡️ Supabase email/password authentication · Scan history linked to your signed-in account</div>', unsafe_allow_html=True)
 st.markdown('</div>', unsafe_allow_html=True)
 
 # -----------------------------------------------------------------------------
@@ -341,11 +341,11 @@ st.markdown('<div class="feature-strip" id="features">', unsafe_allow_html=True)
 fcols = st.columns(6)
 features = [
     ("🧠", "AI Disease Detection", "Identify plant diseases with AI."),
-    ("🛡️", "Secure & Reliable", "Layered account verification."),
-    ("🌱", "Farm Management", "Manage farms and crops."),
-    ("📋", "Expert Guidance", "Observation-focused guidance."),
-    ("📈", "Analytics & Reports", "Track crop health trends."),
-    ("📱", "Multi-Device Access", "Use the platform anywhere."),
+    ("🛡️", "Secure Account Access", "Supabase email/password sign-in."),
+    ("🌱", "Leaf Image Analysis", "Review model-based crop-condition predictions."),
+    ("📋", "Field Observation", "Record symptoms and review safe next steps."),
+    ("📈", "Scan History", "Review saved analyses and export CSV."),
+    ("📱", "Mobile-Friendly", "Use the scanner from supported devices."),
 ]
 for c, (icon, title, desc) in zip(fcols, features):
     with c:
