@@ -100,7 +100,7 @@ The scanner now distinguishes the vegetable classes already present in the curre
 
 ## Streamlit Community Cloud deployment
 
-See [STREAMLIT_DEPLOYMENT.md](STREAMLIT_DEPLOYMENT.md) for the exact repository, branch, and main-file settings. The Streamlit entrypoint is `streamlit_app.py`; `app.py` is the separate Flask API/backend. Configure Supabase credentials in Streamlit Cloud Secrets, never in Git.
+See [STREAMLIT_DEPLOYMENT.md](STREAMLIT_DEPLOYMENT.md) for the exact repository, branch, and main-file settings. The Streamlit entrypoint is `streamlit_app.py`; `app.py` is the separate Flask API/backend. The detection-only scanner does not require Supabase credentials or secrets.
 
 ## Scanner access
 
