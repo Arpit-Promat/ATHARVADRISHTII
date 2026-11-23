@@ -300,9 +300,10 @@ if VEGETABLE_MODEL_PATH.is_file() and VEGETABLE_CLASSES_PATH.is_file():
         "vegetable_leaf",
     )
 
-# Automatically select the first real, usable classifier artifact.
-# Git LFS pointer stubs are excluded by ensure_model_artifact().
+# Automatically resolve and select a real classifier artifact.
+# Git LFS model pointers are downloaded and SHA-256 verified on first use.
 available_models = []
+model_resolution_errors = []
 for display_name, model_config in MODEL_OPTIONS.items():
     candidate_path, candidate_classes, candidate_key = model_config
     try:
@@ -312,16 +313,22 @@ for display_name, model_config in MODEL_OPTIONS.items():
         if isinstance(candidate_labels, list) and candidate_labels:
             available_models.append((display_name, candidate_path, candidate_classes, candidate_key))
             break  # download only the first supported model; do not fetch unused specialists
-    except (FileNotFoundError, RuntimeError, OSError, ValueError):
+    except Exception as artifact_error:
+        model_resolution_errors.append(f'{display_name}: {artifact_error}')
         continue
 
 if not available_models:
     st.error('No usable plant-disease model is available on this deployment.')
     st.warning(
-        'The model files in this repository are Git LFS pointers, not model weights. '
-        'Restore the actual trained model files or configure a real pretrained inference model '
-        'before enabling disease predictions. The app will not invent a diagnosis.'
+        'The repository stores its trained models with Git LFS. The scanner attempted to '
+        'download and verify the real model weights but could not obtain a usable classifier. '
+        'Check that the public Git LFS objects are available and the deployment has outbound access. '
+        'No diagnosis will be fabricated.'
     )
+    if model_resolution_errors:
+        with st.expander('Model loading details'):
+            for failure in model_resolution_errors:
+                st.code(failure)
     st.stop()
 
 # Prefer the general classifier; fall back only to an actually available model.
