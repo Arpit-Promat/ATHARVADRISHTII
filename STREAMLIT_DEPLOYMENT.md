@@ -12,26 +12,17 @@ Use these exact values in Streamlit Community Cloud:
 
 Do not select `app.py`: that file is the Flask API/backend, not the Streamlit interface. Do not select `pages/1_AI_Scanner.py` as the main entrypoint if you want the complete landing page and navigation. The scanner is a multipage destination.
 
-## Streamlit Secrets
+## Scanner access
 
-In the deployed app, open **Manage app → Settings → Secrets** and configure:
+The active plant-detection workflow does not require Supabase credentials, account creation, or login. The landing page opens the scanner directly. Do not add authentication secrets just to use plant detection.
 
-```toml
-SUPABASE_URL = "https://YOUR_PROJECT_REF.supabase.co"
-SUPABASE_ANON_KEY = "YOUR_SUPABASE_PUBLISHABLE_OR_LEGACY_ANON_KEY"
-```
+## Scan history
 
-Use the publishable/anon key only. Never put a Supabase service-role or secret key in a browser-facing Streamlit app. Do not commit real secrets to Git.
-
-Keep **Confirm email** enabled for public deployments. Configure the Supabase email provider and redirect URLs for your deployed Streamlit app. If confirmation is enabled, signup may require the user to verify their email and then sign in; the app must not assume signup always returns an active session.
-
-## Per-user scan history
-
-Run `supabase/scan_history_migration.sql` once in the Supabase SQL Editor. It creates/extends `public.scan_history`, adds the session-key/status/top-predictions columns, and enables per-user Row Level Security policies.
+Per-user scan-history SQL and account modules remain in the repository for possible future use, but they are not part of the active detection-only workflow.
 
 ## Model artifacts
 
-The `.keras` artifacts are stored with Git LFS. Streamlit Community Cloud supports Git LFS, so the deployed checkout should contain the real model files rather than the small text pointer files. The scanner now detects an unresolved LFS pointer and displays an actionable error instead of a generic Keras load failure.
+The classifier and leaf-detector model files are stored with Git LFS. On first scan, the application attempts to resolve each public LFS pointer through GitHub's LFS batch API, downloads the object to a temporary cache, and verifies its declared byte size and SHA-256 digest before loading it. If the LFS object cannot be obtained or verified, the scanner stops with an explicit error rather than producing a fabricated diagnosis.
 
 ## Deploy updates
 
