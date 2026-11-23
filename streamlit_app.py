@@ -262,7 +262,7 @@ with nav:
     with n4:
         st.markdown('<a class="nav-link" href="#scanner">🔬 Scanner</a>', unsafe_allow_html=True)
     with n5:
-        if st.button("📊 Dashboard", use_container_width=True, key="nav_dashboard"):
+        if st.button("🔬 Plant Scanner", use_container_width=True, key="nav_dashboard"):
             destination = "pages/1_AI_Scanner.py"
             st.switch_page(destination)
     with n6:
@@ -310,7 +310,7 @@ with right:
     )
 
 # -----------------------------------------------------------------------------
-# LOGIN / SIGN-UP PANEL
+# SCANNER ENTRY PANEL
 # -----------------------------------------------------------------------------
 st.markdown('<div class="login-shell" id="scanner">', unsafe_allow_html=True)
 st.markdown('<div class="login-title">Ready to check your plant?</div>', unsafe_allow_html=True)
