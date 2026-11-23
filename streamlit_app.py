@@ -1,5 +1,4 @@
 import streamlit as st
-from app_supabase_auth import authenticate, current_user, is_authenticated, session_login, session_logout
 
 st.set_page_config(
     page_title="ATHARVADRISHTI — An Intelligent and Explainable Plant Health Analysis System",
@@ -261,10 +260,10 @@ with nav:
     with n3:
         st.markdown('<a class="nav-link" href="#features">▤ Features</a>', unsafe_allow_html=True)
     with n4:
-        st.markdown('<a class="nav-link" href="#login">🔐 Login</a>', unsafe_allow_html=True)
+        st.markdown('<a class="nav-link" href="#scanner">🔬 Scanner</a>', unsafe_allow_html=True)
     with n5:
-        if st.button("📊 Dashboard", use_container_width=True, key="nav_dashboard"):
-            destination = "pages/5_Health_Dashboard.py" if is_authenticated() else "pages/1_Login.py"
+        if st.button("🔬 Plant Scanner", use_container_width=True, key="nav_dashboard"):
+            destination = "pages/1_AI_Scanner.py"
             st.switch_page(destination)
     with n6:
         mode_label = "☾ Dark" if not is_dark else "☀ Light"
@@ -289,7 +288,7 @@ with left:
     b1, b2 = st.columns(2)
     with b1:
         if st.button("Start Now →", use_container_width=True, type="primary", key="hero_start"):
-            destination = "pages/1_AI_Scanner.py" if is_authenticated() else "pages/1_Login.py"
+            destination = "pages/1_AI_Scanner.py"
             st.switch_page(destination)
     with b2:
         st.markdown('<a class="nav-link" href="#features">Learn More ↓</a>', unsafe_allow_html=True)
@@ -311,29 +310,15 @@ with right:
     )
 
 # -----------------------------------------------------------------------------
-# LOGIN / SIGN-UP PANEL
+# SCANNER ENTRY PANEL
 # -----------------------------------------------------------------------------
-st.markdown('<div class="login-shell" id="login">', unsafe_allow_html=True)
-st.markdown('<div class="login-title">Welcome Back</div>', unsafe_allow_html=True)
-st.markdown('<div class="login-sub">Login to your account to continue your plant-health workflow.</div>', unsafe_allow_html=True)
-identity = st.text_input("Email Address", key="landing_identity", placeholder="Email Address", label_visibility="collapsed")
-password = st.text_input("Password", type="password", key="landing_password", placeholder="Password", label_visibility="collapsed")
-l1, l2 = st.columns(2)
-with l1:
-    if st.button("Login", use_container_width=True, type="primary", key="landing_login"):
-        user, error = authenticate(identity, password)
-        if error:
-            st.error(error)
-        elif user:
-            session_login(user)
-            st.success("Login successful.")
-            st.switch_page("pages/1_AI_Scanner.py")
-with l2:
-    if st.button("Sign Up", use_container_width=True, key="landing_signup"):
-        st.switch_page("pages/2_Sign_Up.py")
-st.markdown('<div class="security-note">🛡️ Supabase email/password authentication · Scan history linked to your signed-in account</div>', unsafe_allow_html=True)
+st.markdown('<div class="login-shell" id="scanner">', unsafe_allow_html=True)
+st.markdown('<div class="login-title">Ready to check your plant?</div>', unsafe_allow_html=True)
+st.markdown('<div class="login-sub">Upload a clear leaf photograph. No account, login, or model selection is required.</div>', unsafe_allow_html=True)
+if st.button('Open Plant Scanner →', use_container_width=True, type='primary', key='landing_open_scanner'):
+    st.switch_page('pages/1_AI_Scanner.py')
+st.markdown('<div class="security-note">🌿 Image-based screening · Confidence checks · Disease-specific prevention guidance</div>', unsafe_allow_html=True)
 st.markdown('</div>', unsafe_allow_html=True)
-
 # -----------------------------------------------------------------------------
 # FEATURES
 # -----------------------------------------------------------------------------
@@ -341,10 +326,10 @@ st.markdown('<div class="feature-strip" id="features">', unsafe_allow_html=True)
 fcols = st.columns(6)
 features = [
     ("🧠", "AI Disease Detection", "Identify plant diseases with AI."),
-    ("🛡️", "Secure Account Access", "Supabase email/password sign-in."),
+    ("🛡️", "Prevention Guidance", "Practical steps matched to the predicted condition."),
     ("🌱", "Leaf Image Analysis", "Review model-based crop-condition predictions."),
     ("📋", "Field Observation", "Record symptoms and review safe next steps."),
-    ("📈", "Scan History", "Review saved analyses and export CSV."),
+    ("📋", "Clear Results", "See confidence, alternatives and limitations."),
     ("📱", "Mobile-Friendly", "Use the scanner from supported devices."),
 ]
 for c, (icon, title, desc) in zip(fcols, features):
@@ -353,22 +338,22 @@ for c, (icon, title, desc) in zip(fcols, features):
 st.markdown('</div>', unsafe_allow_html=True)
 
 # -----------------------------------------------------------------------------
-# SECURITY FLOW
+# DETECTION FLOW
 # -----------------------------------------------------------------------------
 st.markdown('<div class="security-section">', unsafe_allow_html=True)
-st.markdown('<span class="eyebrow">SECURE ACCESS</span>', unsafe_allow_html=True)
-st.markdown('<h2>Secure Access & Personal History</h2>', unsafe_allow_html=True)
-st.markdown('<p>Sign in securely and keep your plant-health scan history connected to your own account.</p>', unsafe_allow_html=True)
+st.markdown('<span class="eyebrow">PLANT HEALTH WORKFLOW</span>', unsafe_allow_html=True)
+st.markdown('<h2>From leaf image to safer next steps</h2>', unsafe_allow_html=True)
+st.markdown('<p>Upload a leaf image, review the screening result, and follow practical prevention guidance.</p>', unsafe_allow_html=True)
 steps = st.columns(4)
 step_data = [
-    ("1", "Sign Up / Login", "Create your account or securely sign in."),
-    ("2", "Private Scan History", "Keep your scans connected to your own account."),
-    ("3", "Health Dashboard", "Review your recent plant-health analyses."),
-    ("4", "Account Control", "Log out when you finish your session."),
+    ("1", "Upload a leaf", "Choose a clear JPG, PNG or WebP photograph."),
+    ("2", "Run detection", "The available verified model is selected automatically."),
+    ("3", "Review the result", "Check the likely condition and confidence."),
+    ("4", "Prevent and monitor", "Follow crop-specific guidance and confirm uncertain cases."),
 ]
 for c, (num, title, desc) in zip(steps, step_data):
     with c:
-        st.markdown(f'<div class="step"><strong>{num}. {title}</strong><p>{desc}</p><div class="mini">✓ Security step</div></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="step"><strong>{num}. {title}</strong><p>{desc}</p><div class="mini">✓ Plant health step</div></div>', unsafe_allow_html=True)
 st.markdown('</div>', unsafe_allow_html=True)
 
 st.markdown('<div class="green-band"><h2>Together for a Greener Tomorrow</h2><p>Better technology. Healthier crops. Stronger farmers.</p></div>', unsafe_allow_html=True)

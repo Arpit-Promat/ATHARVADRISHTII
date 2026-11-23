@@ -100,19 +100,16 @@ The scanner now distinguishes the vegetable classes already present in the curre
 
 ## Streamlit Community Cloud deployment
 
-See [STREAMLIT_DEPLOYMENT.md](STREAMLIT_DEPLOYMENT.md) for the exact repository, branch, and main-file settings. The Streamlit entrypoint is `streamlit_app.py`; `app.py` is the separate Flask API/backend. Configure Supabase credentials in Streamlit Cloud Secrets, never in Git.
+See [STREAMLIT_DEPLOYMENT.md](STREAMLIT_DEPLOYMENT.md) for the exact repository, branch, and main-file settings. The Streamlit entrypoint is `streamlit_app.py`; `app.py` is the separate Flask API/backend. The detection-only scanner does not require Supabase credentials or secrets.
 
-## Streamlit authentication configuration
+## Scanner access
 
-The current Streamlit entrypoint (`streamlit_app.py`) uses **Supabase Auth** through `app_supabase_auth.py`. Configure only the Supabase project URL and publishable/legacy anon key in Streamlit Community Cloud Secrets, as documented in [STREAMLIT_DEPLOYMENT.md](STREAMLIT_DEPLOYMENT.md).
-
-`streamlit_native_auth.py` is a separate legacy/native authentication implementation and is not used by the current Streamlit login flow. Its SMTP/Twilio settings do not configure Supabase authentication. Never commit credentials, service-role keys or SMTP passwords to Git.
-
+The Streamlit plant scanner is available without account creation or authentication. The active detection workflow is image upload/camera capture, automatic model selection, prediction confidence checks and disease-specific prevention guidance. Account and history modules remain in the repository but are not required for scanning.
 
 ## Reliability notes
 
-- The Streamlit scanner requires an authenticated Supabase session; the legacy standalone OTP/2FA pages are not part of the active Supabase flow.
-- Model artifact preflight checks reject missing, empty and unresolved Git LFS pointer files before TensorFlow attempts to load them.
+- The Streamlit scanner does not require an account or authentication.
+- Model artifacts stored in Git LFS are downloaded at runtime and verified against the pointer's SHA-256 digest and declared size before TensorFlow loads them.
 - Scanner field observations and inference results are scoped to the selected image/model signature so changing the image or model does not reuse the previous scan's observations.
 - Current classifier confidence is a model score, not a calibrated probability of field-level diagnostic correctness. Independent field-image evaluation is still required before making accuracy claims.
 - The general MobileNetV2 training pipeline requires controlled retraining and matching artifact replacement before changing its preprocessing contract. This patch intentionally does not alter deployed model inputs without matching retrained weights.

@@ -13,12 +13,10 @@ from disease_guidance import get_disease_guidance
 from decision_support import condition_family
 from severity_engine import assess_observed_severity, build_safe_action_guidance
 
-from app_supabase_auth import current_user, is_authenticated, session_logout
-from model_artifacts import ensure_model_artifact
+from model_artifacts import resolve_model_artifact
 from inference_preprocessing import batch_to_uint8_rgb, preprocess_rgb_array
 from prediction_engine import assess_prediction
 from image_validation import load_validated_image
-from streamlit_scan_history import make_session_key, save_scan
 from vegetable_leaf_support import vegetable_catalog, vegetable_class_coverage
 
 
@@ -32,15 +30,6 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="collapsed"
 )
-
-if not is_authenticated():
-    st.warning("Please log in to use the AI Scanner.")
-    if st.button("Go to Login", type="primary"):
-        st.switch_page("pages/1_Login.py")
-    if st.button("Back to Home"):
-        st.switch_page("streamlit_app.py")
-    st.stop()
-
 
 # ============================================================
 # CUSTOM CSS
@@ -258,17 +247,12 @@ An Intelligent and Explainable Plant Health Analysis System
 st.write("")
 
 # Simple navigation is available even when this page is used as the Streamlit entry point.
-nav_home, nav_dashboard, nav_logout = st.columns([1, 1, 1])
+nav_home, nav_note = st.columns([1, 3])
 with nav_home:
     if st.button("⌂ Home", use_container_width=True, key="scanner_home"):
         st.switch_page("streamlit_app.py")
-with nav_dashboard:
-    if st.button("📊 My Dashboard", use_container_width=True, key="scanner_dashboard"):
-        st.switch_page("pages/5_Health_Dashboard.py")
-with nav_logout:
-    if st.button("↪ Logout", use_container_width=True, key="scanner_logout"):
-        session_logout()
-        st.switch_page("streamlit_app.py")
+with nav_note:
+    st.caption("Detection mode · No account or login required")
 
 
 # ============================================================
@@ -316,23 +300,51 @@ if VEGETABLE_MODEL_PATH.is_file() and VEGETABLE_CLASSES_PATH.is_file():
         "vegetable_leaf",
     )
 
-selected_model_label = st.selectbox(
-    "Choose AI Model",
-    options=list(MODEL_OPTIONS.keys()),
-    index=0,
-    key="scanner_model_choice",
-)
-selected_model_path, selected_class_path, selected_model_key = MODEL_OPTIONS[selected_model_label]
+# Automatically resolve and select a real classifier artifact.
+# Git LFS model pointers are downloaded and SHA-256 verified on first use.
+available_models = []
+model_resolution_errors = []
+for display_name, model_config in MODEL_OPTIONS.items():
+    candidate_path, candidate_classes, candidate_key = model_config
+    try:
+        resolve_model_artifact(candidate_path)
+        with open(candidate_classes, 'r', encoding='utf-8') as class_file:
+            candidate_labels = json.load(class_file)
+        if isinstance(candidate_labels, list) and candidate_labels:
+            available_models.append((display_name, candidate_path, candidate_classes, candidate_key))
+            break  # download only the first supported model; do not fetch unused specialists
+    except Exception as artifact_error:
+        model_resolution_errors.append(f'{display_name}: {artifact_error}')
+        continue
+
+if not available_models:
+    st.error('No usable plant-disease model is available on this deployment.')
+    st.warning(
+        'The repository stores its trained models with Git LFS. The scanner attempted to '
+        'download and verify the real model weights but could not obtain a usable classifier. '
+        'Check that the public Git LFS objects are available and the deployment has outbound access. '
+        'No diagnosis will be fabricated.'
+    )
+    if model_resolution_errors:
+        with st.expander('Model loading details'):
+            for failure in model_resolution_errors:
+                st.code(failure)
+    st.stop()
+
+# Prefer the general classifier; fall back only to an actually available model.
+selected_model = next((item for item in available_models if item[3] == 'general'), available_models[0])
+selected_model_label, selected_model_path, selected_class_path, selected_model_key = selected_model
+st.caption(f'Automatically selected model: **{selected_model_label}**')
 
 @st.cache_resource(max_entries=1)
 def load_ai_model(model_path, class_path):
 
     # Git LFS pointer files are tiny text placeholders, not loadable Keras models.
     # This produces a useful deployment error instead of a confusing ZIP/model error.
-    ensure_model_artifact(model_path)
+    resolved_model_path = resolve_model_artifact(model_path)
 
     selected_model = load_model(
-        model_path,
+        str(resolved_model_path),
         compile=False
     )
 
@@ -419,9 +431,9 @@ LEAF_DETECTOR_THRESHOLD = 0.65
 @st.cache_resource(max_entries=1)
 def load_leaf_detector():
 
-    ensure_model_artifact("models/leaf_detector_model.keras")
+    detector_path = resolve_model_artifact("models/leaf_detector_model.keras")
     detector = load_model(
-        "models/leaf_detector_model.keras",
+        str(detector_path),
         compile=False
     )
 
@@ -932,39 +944,7 @@ predicted_name = clean_class_name(assessment["prediction"])
 confidence = float(assessment["confidence"])
 prediction_margin = float(assessment["margin"])
 
-# Save accepted and rejected outcomes with an explicit status. A rejected
-# candidate is never stored as a completed diagnosis.
-try:
-    authenticated_user = current_user()
-    if authenticated_user:
-        scan_session_key = make_session_key(
-            input_file.getvalue(),
-            input_file.name,
-            predicted_name,
-        )
-        if st.session_state.get("last_history_scan_key") != scan_session_key:
-            save_scan(
-                user_id=str(authenticated_user["id"]),
-                session_key=scan_session_key,
-                filename=input_file.name,
-                prediction=predicted_name if assessment["accepted"] else None,
-                confidence=round(confidence, 2),
-                status=assessment["status"],
-                top_predictions=[
-                    {
-                        "rank": rank,
-                        "prediction": clean_class_name(class_names[int(index)]),
-                        "confidence": round(float(predictions[int(index)]) * 100, 2),
-                    }
-                    for rank, index in enumerate(top_indices, start=1)
-                ],
-            )
-            st.session_state["last_history_scan_key"] = scan_session_key
-except Exception:
-    st.warning(
-        "The analysis ran, but this scan could not be saved to your history. "
-        "Check the Supabase scan_history table and its Row Level Security policies."
-    )
+# Detection runs without an account; scan history is optional.
 
 if not assessment["accepted"]:
     st.error("⚠️ The model could not make a sufficiently reliable prediction.")
