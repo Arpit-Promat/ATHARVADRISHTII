@@ -13,7 +13,7 @@ from disease_guidance import get_disease_guidance
 from decision_support import condition_family
 from severity_engine import assess_observed_severity, build_safe_action_guidance
 
-from model_artifacts import ensure_model_artifact
+from model_artifacts import resolve_model_artifact
 from inference_preprocessing import batch_to_uint8_rgb, preprocess_rgb_array
 from prediction_engine import assess_prediction
 from image_validation import load_validated_image
@@ -306,11 +306,12 @@ available_models = []
 for display_name, model_config in MODEL_OPTIONS.items():
     candidate_path, candidate_classes, candidate_key = model_config
     try:
-        ensure_model_artifact(candidate_path)
+        resolve_model_artifact(candidate_path)
         with open(candidate_classes, 'r', encoding='utf-8') as class_file:
             candidate_labels = json.load(class_file)
         if isinstance(candidate_labels, list) and candidate_labels:
             available_models.append((display_name, candidate_path, candidate_classes, candidate_key))
+            break  # download only the first supported model; do not fetch unused specialists
     except (FileNotFoundError, RuntimeError, OSError, ValueError):
         continue
 
@@ -333,10 +334,10 @@ def load_ai_model(model_path, class_path):
 
     # Git LFS pointer files are tiny text placeholders, not loadable Keras models.
     # This produces a useful deployment error instead of a confusing ZIP/model error.
-    ensure_model_artifact(model_path)
+    resolved_model_path = resolve_model_artifact(model_path)
 
     selected_model = load_model(
-        model_path,
+        str(resolved_model_path),
         compile=False
     )
 
@@ -423,9 +424,9 @@ LEAF_DETECTOR_THRESHOLD = 0.65
 @st.cache_resource(max_entries=1)
 def load_leaf_detector():
 
-    ensure_model_artifact("models/leaf_detector_model.keras")
+    detector_path = resolve_model_artifact("models/leaf_detector_model.keras")
     detector = load_model(
-        "models/leaf_detector_model.keras",
+        str(detector_path),
         compile=False
     )
 
