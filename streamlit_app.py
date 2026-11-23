@@ -348,12 +348,12 @@ steps = st.columns(4)
 step_data = [
     ("1", "Upload a leaf", "Choose a clear JPG, PNG or WebP photograph."),
     ("2", "Run detection", "The available verified model is selected automatically."),
-    ("3", "Health Dashboard", "Review your recent plant-health analyses."),
-    ("4", "Account Control", "Log out when you finish your session."),
+    ("3", "Review the result", "Check the likely condition and confidence."),
+    ("4", "Prevent and monitor", "Follow crop-specific guidance and confirm uncertain cases."),
 ]
 for c, (num, title, desc) in zip(steps, step_data):
     with c:
-        st.markdown(f'<div class="step"><strong>{num}. {title}</strong><p>{desc}</p><div class="mini">✓ Security step</div></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="step"><strong>{num}. {title}</strong><p>{desc}</p><div class="mini">✓ Plant health step</div></div>', unsafe_allow_html=True)
 st.markdown('</div>', unsafe_allow_html=True)
 
 st.markdown('<div class="green-band"><h2>Together for a Greener Tomorrow</h2><p>Better technology. Healthier crops. Stronger farmers.</p></div>', unsafe_allow_html=True)
