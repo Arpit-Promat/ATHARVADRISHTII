@@ -1207,9 +1207,6 @@ with info_col2:
             st.markdown("### 🧪 Common cause / pattern")
             st.write(occurrence_context[0])
 
-if guidance.get("note"):
-    st.info(f"ℹ️ {guidance['note']}")
-
 # ============================================================
 # EXPLAINABLE AI
 # ============================================================
@@ -1254,11 +1251,6 @@ else:
             "This attribution map estimates which image regions influenced the selected model output."
         )
         st.image(shap_image, use_container_width=True)
-    st.warning(
-        "SHAP is a model-attribution method, not a verified disease boundary or measurement of infection severity."
-    )
-
-
 # ============================================================
 # AI EXPLANATION + MAP GUIDE
 # ============================================================
@@ -1351,22 +1343,6 @@ with guide_col:
             st.caption("Lower displayed attribution magnitude. Colours are not disease severity.")
         else:
             st.info("A colour legend is unavailable because no SHAP map was generated.")
-
-
-    with st.container(border=True):
-
-        st.markdown(
-            "### ⚠️ Important"
-        )
-
-        st.info(
-            (
-                "The SHAP map estimates which image regions influenced the selected model output; "
-                "it is not a verified disease boundary."
-            )
-            if shap_image is not None
-            else "No SHAP attribution map was available for this image, so no highlighted region is being claimed."
-        )
 
 
 # ============================================================
