@@ -1,6 +1,5 @@
-import streamlit as st
+﻿import streamlit as st
 import json
-import hashlib
 from pathlib import Path
 import numpy as np
 import cv2
@@ -11,12 +10,12 @@ from tensorflow.keras.models import load_model
 
 from disease_guidance import get_disease_guidance
 from decision_support import condition_family
-from severity_engine import assess_observed_severity, build_safe_action_guidance
 
-from model_artifacts import resolve_model_artifact
+from app_supabase_auth import current_user, session_logout
 from inference_preprocessing import batch_to_uint8_rgb, preprocess_rgb_array
 from prediction_engine import assess_prediction
 from image_validation import load_validated_image
+from streamlit_scan_history import make_session_key, save_scan
 from vegetable_leaf_support import vegetable_catalog, vegetable_class_coverage
 
 
@@ -30,6 +29,7 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="collapsed"
 )
+
 
 # ============================================================
 # CUSTOM CSS
@@ -247,12 +247,17 @@ An Intelligent and Explainable Plant Health Analysis System
 st.write("")
 
 # Simple navigation is available even when this page is used as the Streamlit entry point.
-nav_home, nav_note = st.columns([1, 3])
+nav_home, nav_dashboard, nav_logout = st.columns([1, 1, 1])
 with nav_home:
     if st.button("⌂ Home", use_container_width=True, key="scanner_home"):
         st.switch_page("streamlit_app.py")
-with nav_note:
-    st.caption("Detection mode · No account or login required")
+with nav_dashboard:
+    if st.button("📊 My Dashboard", use_container_width=True, key="scanner_dashboard"):
+        st.switch_page("pages/5_Health_Dashboard.py")
+with nav_logout:
+    if st.button("↪ Logout", use_container_width=True, key="scanner_logout"):
+        session_logout()
+        st.switch_page("streamlit_app.py")
 
 
 # ============================================================
@@ -260,7 +265,7 @@ with nav_note:
 # ============================================================
 
 MODEL_OPTIONS = {
-    "General Leaf Classifier (38 classes) — PlantVillage-style class map": (
+    "PlantDoc — General & Vegetable Leaf Classifier (38 classes)": (
         "models/plantdoc_model.keras",
         "models/class_names.json",
         "general",
@@ -300,51 +305,29 @@ if VEGETABLE_MODEL_PATH.is_file() and VEGETABLE_CLASSES_PATH.is_file():
         "vegetable_leaf",
     )
 
-# Automatically resolve and select a real classifier artifact.
-# Git LFS model pointers are downloaded and SHA-256 verified on first use.
-available_models = []
-model_resolution_errors = []
-for display_name, model_config in MODEL_OPTIONS.items():
-    candidate_path, candidate_classes, candidate_key = model_config
-    try:
-        resolve_model_artifact(candidate_path)
-        with open(candidate_classes, 'r', encoding='utf-8') as class_file:
-            candidate_labels = json.load(class_file)
-        if isinstance(candidate_labels, list) and candidate_labels:
-            available_models.append((display_name, candidate_path, candidate_classes, candidate_key))
-            break  # download only the first supported model; do not fetch unused specialists
-    except Exception as artifact_error:
-        model_resolution_errors.append(f'{display_name}: {artifact_error}')
-        continue
+selected_model_label = st.selectbox(
+    "Choose AI Model",
+    options=list(MODEL_OPTIONS.keys()),
+    index=0,
+    key="scanner_model_choice",
+)
+selected_model_path, selected_class_path, selected_model_key = MODEL_OPTIONS[selected_model_label]
 
-if not available_models:
-    st.error('No usable plant-disease model is available on this deployment.')
-    st.warning(
-        'The repository stores its trained models with Git LFS. The scanner attempted to '
-        'download and verify the real model weights but could not obtain a usable classifier. '
-        'Check that the public Git LFS objects are available and the deployment has outbound access. '
-        'No diagnosis will be fabricated.'
-    )
-    if model_resolution_errors:
-        with st.expander('Model loading details'):
-            for failure in model_resolution_errors:
-                st.code(failure)
-    st.stop()
-
-# Prefer the general classifier; fall back only to an actually available model.
-selected_model = next((item for item in available_models if item[3] == 'general'), available_models[0])
-selected_model_label, selected_model_path, selected_class_path, selected_model_key = selected_model
-st.caption(f'Automatically selected model: **{selected_model_label}**')
-
-@st.cache_resource(max_entries=1)
+@st.cache_resource
 def load_ai_model(model_path, class_path):
 
     # Git LFS pointer files are tiny text placeholders, not loadable Keras models.
     # This produces a useful deployment error instead of a confusing ZIP/model error.
-    resolved_model_path = resolve_model_artifact(model_path)
+    with open(model_path, "rb") as model_file:
+        model_header = model_file.read(128)
+    if model_header.startswith(b"version https://git-lfs.github.com/spec/v1"):
+        raise RuntimeError(
+            f"{model_path} is still a Git LFS pointer in this deployment. "
+            "Ensure the actual model artifact is available to Streamlit Cloud."
+        )
 
     selected_model = load_model(
-        str(resolved_model_path),
+        model_path,
         compile=False
     )
 
@@ -386,7 +369,7 @@ if selected_model_key == "general":
     vegetable_coverage = vegetable_class_coverage(class_names)
     with st.expander("🥬 Vegetable leaf diseases currently supported", expanded=True):
         st.markdown(
-            "**The current 38-class general model includes these vegetable-leaf categories in its class map.** "
+            "**The existing PlantDoc 38-class model already includes these vegetable-leaf categories.** "
             "This is existing trained coverage, not a newly trained vegetable-only model."
         )
         coverage_cols = st.columns(4)
@@ -403,7 +386,7 @@ if selected_model_key == "general":
     with st.expander("🇮🇳 India vegetable crop catalog — planned dataset coverage"):
         st.warning(
             "These crops are included in the project dataset roadmap. They are NOT all "
-            "trained or supported by the current 38-class general model yet."
+            "trained or supported by the current 38-class PlantDoc model yet."
         )
         catalog_names = [item["crop"] for item in vegetable_catalog()]
         catalog_columns = st.columns(3)
@@ -428,12 +411,11 @@ LEAF_DETECTOR_THRESHOLD = 0.65
 # HELPER FUNCTIONS
 # ============================================================
 
-@st.cache_resource(max_entries=1)
+@st.cache_resource
 def load_leaf_detector():
 
-    detector_path = resolve_model_artifact("models/leaf_detector_model.keras")
     detector = load_model(
-        str(detector_path),
+        "models/leaf_detector_model.keras",
         compile=False
     )
 
@@ -816,26 +798,7 @@ with submit_col:
         key="analyze_leaf_image",
     )
 
-# Streamlit reruns the page whenever a triage selectbox changes. Keep the
-# completed analysis associated with the exact image + model so those reruns
-# can redraw the results instead of returning to the upload step.
-analysis_signature = hashlib.sha256(
-    input_file.getvalue() + selected_model_key.encode("utf-8")
-).hexdigest()
-
-if analyze_requested:
-    st.session_state["scanner_analyzed_signature"] = analysis_signature
-
-previous_triage_signature = st.session_state.get("scanner_triage_signature")
-if previous_triage_signature != analysis_signature:
-    for triage_key in ("field_symptom_extent", "field_spread", "field_plant_impact"):
-        st.session_state.pop(triage_key, None)
-    for cache_key in list(st.session_state.keys()):
-        if cache_key.startswith(("scanner_leaf_", "scanner_prediction_", "scanner_shap_")):
-            st.session_state.pop(cache_key, None)
-    st.session_state["scanner_triage_signature"] = analysis_signature
-
-if st.session_state.get("scanner_analyzed_signature") != analysis_signature:
+if not analyze_requested:
     st.info(
         "✅ Image selected. Press **🧠 Analyze Image** to start leaf validation and disease analysis."
     )
@@ -863,25 +826,24 @@ image_array = preprocess_image(
 # LEAF / NON-LEAF VALIDATION
 # ============================================================
 
-leaf_cache_key = f"scanner_leaf_{analysis_signature}"
 if selected_model_key in ("fruitleaf6", "wheat", "rice_pest", "sugarcane"):
     # These crop-specific datasets have their own image distributions.
-    # The general leaf detector is not calibrated for these model families.
+    # The separate PlantDoc leaf detector can reject valid images from them,
+    # so skip that unrelated gate for these selected models.
     leaf_probability = None
-    st.session_state[leaf_cache_key] = None
 else:
     try:
-        if leaf_cache_key in st.session_state:
-            leaf_probability = st.session_state[leaf_cache_key]
-        else:
-            leaf_detector, leaf_detector_classes = load_leaf_detector()
-            leaf_probability = get_leaf_probability(
-                image_array,
-                leaf_detector,
-                leaf_detector_classes
-            )
-            st.session_state[leaf_cache_key] = leaf_probability
+
+        leaf_detector, leaf_detector_classes = load_leaf_detector()
+
+        leaf_probability = get_leaf_probability(
+            image_array,
+            leaf_detector,
+            leaf_detector_classes
+        )
+
     except Exception as detector_error:
+
         st.error("❌ Leaf validation model could not be loaded.")
         st.error(str(detector_error))
         st.stop()
@@ -925,26 +887,61 @@ else:
 # PREDICTION
 # ============================================================
 
-prediction_cache_key = f"scanner_prediction_{analysis_signature}"
-if prediction_cache_key in st.session_state:
-    predictions, top_indices, assessment = st.session_state[prediction_cache_key]
-else:
-    with st.spinner("🧠 ATHARVADRISHTI is analyzing the leaf..."):
-        predictions, top_indices = get_predictions(image_array, model)
-    assessment = assess_prediction(
-        predictions,
-        class_names,
-        selected_model_key,
-        top_k=3,
+with st.spinner(
+    "🧠 ATHARVADRISHTI is analyzing the leaf..."
+):
+
+    predictions, top_indices = get_predictions(
+        image_array,
+        model
     )
-    st.session_state[prediction_cache_key] = (predictions, top_indices, assessment)
+
+
+assessment = assess_prediction(
+    predictions,
+    class_names,
+    selected_model_key,
+    top_k=3,
+)
 
 predicted_index = int(assessment["predicted_index"])
 predicted_name = clean_class_name(assessment["prediction"])
 confidence = float(assessment["confidence"])
 prediction_margin = float(assessment["margin"])
 
-# Detection runs without an account; scan history is optional.
+# Save accepted and rejected outcomes with an explicit status. A rejected
+# candidate is never stored as a completed diagnosis.
+try:
+    authenticated_user = current_user()
+    if authenticated_user:
+        scan_session_key = make_session_key(
+            input_file.getvalue(),
+            input_file.name,
+            predicted_name,
+        )
+        if st.session_state.get("last_history_scan_key") != scan_session_key:
+            save_scan(
+                user_id=str(authenticated_user["id"]),
+                session_key=scan_session_key,
+                filename=input_file.name,
+                prediction=predicted_name if assessment["accepted"] else None,
+                confidence=round(confidence, 2),
+                status=assessment["status"],
+                top_predictions=[
+                    {
+                        "rank": rank,
+                        "prediction": clean_class_name(class_names[int(index)]),
+                        "confidence": round(float(predictions[int(index)]) * 100, 2),
+                    }
+                    for rank, index in enumerate(top_indices, start=1)
+                ],
+            )
+            st.session_state["last_history_scan_key"] = scan_session_key
+except Exception:
+    st.warning(
+        "The analysis ran, but this scan could not be saved to your history. "
+        "Check the Supabase scan_history table and its Row Level Security policies."
+    )
 
 if not assessment["accepted"]:
     st.error("⚠️ The model could not make a sufficiently reliable prediction.")
@@ -1242,54 +1239,6 @@ with info_col2:
 
 if guidance.get("note"):
     st.info(f"ℹ️ {guidance['note']}")
-# ============================================================
-# FIELD OBSERVATION SEVERITY + SAFE ACTIONS
-# ============================================================
-
-st.write("")
-st.markdown(
-    '<div class="section-title">🩺 Field Observation & Severity Triage</div>',
-    unsafe_allow_html=True
-)
-st.caption(
-    "This section uses your field observations only. It does not use AI confidence or SHAP, "
-    "and it does not estimate an infected-area percentage."
-)
-with st.expander("Record what you observe in the field", expanded=False):
-    extent_options = ["not_assessed", "none", "few_leaves", "several_leaves", "many_leaves_or_multiple_plants"]
-    spread_options = ["not_assessed", "not_spreading_or_unknown", "one_plant", "nearby_plants", "multiple_rows_or_area"]
-    impact_options = ["not_assessed", "no_obvious_impact", "minor_growth_change", "reduced_growth_or_yield_concern", "wilting_or_major_functional_decline"]
-    extent = st.selectbox(
-        "How much of the plant/field appears affected?",
-        extent_options,
-        format_func=lambda value: {"not_assessed": "Select an observation", "none": "No visible symptoms reported", "few_leaves": "A few leaves", "several_leaves": "Several leaves on a plant", "many_leaves_or_multiple_plants": "Many leaves or multiple plants"}[value],
-        key="field_symptom_extent",
-    )
-    spread = st.selectbox(
-        "How widely have symptoms spread?",
-        spread_options,
-        format_func=lambda value: {"not_assessed": "Select an observation", "not_spreading_or_unknown": "Not spreading / unknown", "one_plant": "One plant", "nearby_plants": "Nearby plants", "multiple_rows_or_area": "Multiple rows or a wider area"}[value],
-        key="field_spread",
-    )
-    impact = st.selectbox(
-        "What is the visible impact on the plant?",
-        impact_options,
-        format_func=lambda value: {"not_assessed": "Select an observation", "no_obvious_impact": "No obvious impact", "minor_growth_change": "Minor growth change", "reduced_growth_or_yield_concern": "Reduced growth / yield concern", "wilting_or_major_functional_decline": "Wilting or major decline"}[value],
-        key="field_plant_impact",
-    )
-    if "not_assessed" in (extent, spread, impact):
-        st.info("Complete all three observations to see a field triage. No severity level is assumed by default.")
-    else:
-        field_assessment = assess_observed_severity(extent, spread, impact)
-        st.markdown(f"**Observation triage:** {field_assessment['label']}")
-        st.caption(f"Review priority: {field_assessment['priority'].replace('_', ' ').title()}")
-        st.warning("This is an ordinal field-observation category, not a biological severity score, diagnosis, or percentage of infected tissue.")
-        safe_guidance = build_safe_action_guidance(predicted_name, field_assessment)
-        st.markdown("**Suggested safe next steps**")
-        for action in safe_guidance["actions"]:
-            st.markdown(f"- {action}")
-        st.caption(safe_guidance["note"])
-
 
 # ============================================================
 # EXPLAINABLE AI
@@ -1310,19 +1259,16 @@ st.markdown(
 )
 
 
-# SHAP is expensive; reuse the explanation for this exact image/model
-# across Streamlit widget reruns.
-shap_cache_key = f"scanner_shap_{analysis_signature}"
-if shap_cache_key not in st.session_state:
-    with st.spinner("🔎 Generating AI explanation..."):
-        st.session_state[shap_cache_key] = generate_shap_heatmap(
-            image_array,
-            predicted_index,
-            model,
-            class_names,
-        )
+with st.spinner(
+    "🔎 Generating AI explanation..."
+):
 
-shap_image = st.session_state[shap_cache_key]
+    shap_image = generate_shap_heatmap(
+        image_array,
+        predicted_index,
+        model,
+        class_names,
+    )
 
 
 if shap_image is None:

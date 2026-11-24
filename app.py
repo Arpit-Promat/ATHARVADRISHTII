@@ -5,7 +5,7 @@ from functools import lru_cache
 
 import numpy as np
 
-from flask import Flask, abort, jsonify, render_template, request, send_from_directory, url_for
+from flask import Flask, jsonify, render_template, request
 from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing import image
 
@@ -18,8 +18,6 @@ from phase10_api import register_phase10_routes
 from model_registry import get_model_spec, model_identifier
 from observability import log_event, timed_event
 from prediction_engine import assess_prediction
-from inference_preprocessing import preprocess_rgb_array
-from media_storage import create_media_token, private_media_dir, resolve_media_token
 
 
 app = Flask(__name__)
@@ -31,14 +29,6 @@ register_phase9_routes(app)
 register_phase10_routes(app)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
-
-@app.get("/private-media/<token>")
-def private_media(token):
-    filename = resolve_media_token(token, app.config["SECRET_KEY"])
-    if not filename:
-        abort(404)
-    return send_from_directory(private_media_dir(BASE_DIR), filename, conditional=True)
 
 GENERAL_SPEC = get_model_spec("general")
 GENERAL_MODEL_PATH = os.path.join(BASE_DIR, GENERAL_SPEC.model_path)
@@ -69,7 +59,7 @@ LEAF_DETECTOR_THRESHOLD = 0.5
 ALLOWED_PLANT_TYPES = {"general", "mango", "fruitleaf6", "wheat", "rice-pest", "sugarcane"}
 
 
-@lru_cache(maxsize=3)
+@lru_cache(maxsize=None)
 def load_registered_model_and_classes(model_key):
     """Load an additional registered classifier only when it is selected."""
     spec = get_model_spec(model_key)
@@ -210,12 +200,11 @@ def generate_shap(model, class_names, img_arr, predicted_index):
     original = np.uint8(img_arr[0] * 255)
     overlay = cv2.addWeighted(original, 0.60, heatmap_color, 0.40, 0)
 
-    os.makedirs(private_media_dir(BASE_DIR), exist_ok=True)
-    shap_filename = f"shap_{uuid.uuid4().hex}.jpg"
-    shap_path = os.path.join(private_media_dir(BASE_DIR), shap_filename)
+    os.makedirs(os.path.join(BASE_DIR, "static"), exist_ok=True)
+    shap_path = os.path.join(BASE_DIR, "static", "shap_output.jpg")
     cv2.imwrite(shap_path, cv2.cvtColor(overlay, cv2.COLOR_RGB2BGR))
     print("SHAP explanation saved.")
-    return url_for("private_media", token=create_media_token(shap_filename, app.config["SECRET_KEY"]))
+    return "/static/shap_output.jpg"
 
 
 @app.route("/", methods=["GET", "POST"])
@@ -257,7 +246,7 @@ def index():
                     else:
                         model, class_names = get_model_and_classes(selected_plant_type)
                         model_key = get_model_key(selected_plant_type)
-                    upload_folder = private_media_dir(BASE_DIR)
+                    upload_folder = os.path.join(BASE_DIR, "static", "uploads")
                     os.makedirs(upload_folder, exist_ok=True)
 
                     safe_name = validation_result
@@ -272,9 +261,11 @@ def index():
                         arr = image.img_to_array(img) / 255.0
                         input_image = np.expand_dims(arr.astype(np.float32), axis=0)
                     else:
-                        img = image.load_img(original_path, target_size=(224, 224), color_mode="rgb")
-                        raw_rgb = image.img_to_array(img)
-                        input_image = preprocess_rgb_array(raw_rgb, model_key)
+                        img = image.load_img(original_path, target_size=(224, 224))
+                        arr = image.img_to_array(img) / 255.0
+                        input_image = np.expand_dims(arr, axis=0)
+                    if selected_plant_type in {"wheat", "rice-pest"}:
+                        input_image = input_image * 255.0
 
                     # FruitLeaf6 includes fruit as well as leaf classes, so it
                     # must not be blocked by the leaf-only image detector.
@@ -282,8 +273,7 @@ def index():
                         is_leaf = True
                         leaf_probability = None
                     else:
-                        detector_input = preprocess_rgb_array(raw_rgb, "general")
-                        is_leaf, leaf_probability_value = is_leaf_image(detector_input)
+                        is_leaf, leaf_probability_value = is_leaf_image(input_image)
                         leaf_probability = round(float(leaf_probability_value) * 100, 2)
 
                     if not is_leaf:
@@ -291,7 +281,7 @@ def index():
                         print("Rejected by leaf detector — not a leaf image.")
                         error = "This doesn't look like a leaf. Please upload a clear photo of a plant leaf."
                     else:
-                        original_image = url_for("private_media", token=create_media_token(unique_name, app.config["SECRET_KEY"]))
+                        original_image = f"/static/uploads/{unique_name}"
                         if selected_plant_type == "sugarcane":
                             reconstructed = model.predict(input_image, verbose=0)
                             anomaly_error = float(np.mean(np.square(input_image - reconstructed)))
@@ -301,7 +291,7 @@ def index():
                             top_predictions = []
                             confidence_level = None
                             confidence_label = "Healthy-image similarity check"
-                            original_image = url_for("private_media", token=create_media_token(unique_name, app.config["SECRET_KEY"]))
+                            original_image = f"/static/uploads/{unique_name}"
                             ai_explanation = [
                                 f"Reconstruction error: {anomaly_error:.6f} (healthy-image threshold: {anomaly_threshold:.6f}).",
                                 "This model learns the appearance of healthy sugarcane leaves; it does not identify disease names.",
@@ -355,10 +345,7 @@ def index():
                                     "The highlighted regions help identify which visible leaf features influenced the classification.",
                                     "This explanation improves model transparency by showing why the AI reached its prediction instead of only giving the final disease name.",
                                 ]
-                                # SHAP overlay expects display-scaled RGB [0, 1], regardless
-                                # of the model's internal preprocessing contract.
-                                shap_input = np.expand_dims(raw_rgb.astype(np.float32) / 255.0, axis=0)
-                                shap_image = generate_shap(model, class_names, shap_input, idx)
+                                shap_image = generate_shap(model, class_names, input_image, idx)
 
                 except Exception as exc:
                     log_event("prediction.error", error_type=type(exc).__name__)

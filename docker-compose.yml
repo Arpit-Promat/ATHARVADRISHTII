@@ -6,15 +6,13 @@ services:
       - "5000:5000"
     environment:
       FLASK_DEBUG: "0"
-      SECRET_KEY: "${SECRET_KEY:?Set a strong SECRET_KEY in the environment}"
-      DATABASE_URL: "postgresql+psycopg://atharvadrishti:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in the environment}@db:5432/atharvadrishti"
+      SECRET_KEY: "${SECRET_KEY:-change-this-to-a-long-random-secret}"
+      DATABASE_URL: postgresql+psycopg://atharvadrishti:atharvadrishti@db:5432/atharvadrishti
       RATELIMIT_STORAGE_URI: redis://redis:6379/1
       REDIS_URL: redis://redis:6379/0
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/2
       WEB_CONCURRENCY: "2"
-      COOKIE_SECURE: "${COOKIE_SECURE:-1}"
-      FORCE_HTTPS: "${FORCE_HTTPS:-1}"
     volumes:
       - media_data:/app/static/uploads
     depends_on:
@@ -29,8 +27,8 @@ services:
     command: celery -A tasks.celery worker --loglevel=INFO --concurrency=1
     environment:
       FLASK_DEBUG: "0"
-      SECRET_KEY: "${SECRET_KEY:?Set a strong SECRET_KEY in the environment}"
-      DATABASE_URL: "postgresql+psycopg://atharvadrishti:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in the environment}@db:5432/atharvadrishti"
+      SECRET_KEY: "${SECRET_KEY:-change-this-to-a-long-random-secret}"
+      DATABASE_URL: postgresql+psycopg://atharvadrishti:atharvadrishti@db:5432/atharvadrishti
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/2
     volumes:
@@ -58,7 +56,7 @@ services:
     environment:
       POSTGRES_DB: atharvadrishti
       POSTGRES_USER: atharvadrishti
-      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in the environment}"
+      POSTGRES_PASSWORD: atharvadrishti
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
