@@ -4,6 +4,7 @@ import sys
 import numpy as np
 from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing import image
+from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
 
 if len(sys.argv) != 2:
     print("Usage: python predict.py path/to/leaf.jpg")
@@ -18,7 +19,7 @@ with open(CLASS_NAMES_PATH, encoding="utf-8") as f:
     classes = json.load(f)
 
 img = image.load_img(sys.argv[1], target_size=(224, 224))
-arr = image.img_to_array(img) / 255.0
+arr = preprocess_input(image.img_to_array(img))
 pred = model.predict(np.expand_dims(arr, 0), verbose=0)[0]
 idx = int(np.argmax(pred))
 
