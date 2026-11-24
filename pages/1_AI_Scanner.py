@@ -365,36 +365,6 @@ except Exception as e:
     st.stop()
 
 
-if selected_model_key == "general":
-    vegetable_coverage = vegetable_class_coverage(class_names)
-    with st.expander("🥬 Vegetable leaf diseases currently supported", expanded=True):
-        st.markdown(
-            "**The existing PlantDoc 38-class model already includes these vegetable-leaf categories.** "
-            "This is existing trained coverage, not a newly trained vegetable-only model."
-        )
-        coverage_cols = st.columns(4)
-        for column, (crop, labels) in zip(coverage_cols, vegetable_coverage.items()):
-            with column:
-                st.markdown(f"**{crop}**")
-                for label in labels:
-                    st.caption("• " + label.split("___", 1)[-1].replace("_", " ").replace(",", ""))
-        st.caption(
-            "For additional vegetables such as brinjal, cucumber, okra, cabbage or cauliflower, "
-            "a labelled dataset and model retraining are required."
-        )
-
-    with st.expander("🇮🇳 India vegetable crop catalog — planned dataset coverage"):
-        st.warning(
-            "These crops are included in the project dataset roadmap. They are NOT all "
-            "trained or supported by the current 38-class PlantDoc model yet."
-        )
-        catalog_names = [item["crop"] for item in vegetable_catalog()]
-        catalog_columns = st.columns(3)
-        for index, crop_name in enumerate(catalog_names):
-            with catalog_columns[index % 3]:
-                st.caption("• " + crop_name)
-
-
 # ============================================================
 # CONSTANTS
 # ============================================================
