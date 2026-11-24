@@ -138,34 +138,10 @@ callbacks = [
 # =========================
 # TRAIN
 # =========================
-import os
-from tensorflow.keras.models import load_model
-
+# Preprocessing changed to MobileNetV2's required [-1, 1] range.
+# Always train a fresh checkpoint; never resume weights trained on [0, 1].
 checkpoint_path = MODEL_DIR / "plantdoc_model.keras"
 class_map_path = MODEL_DIR / "class_names.json"
-
-# Resume only when a sidecar class map proves that the saved model was
-# trained with exactly this class-index order. Older checkpoints without
-# this metadata are retrained from the freshly built architecture.
-if checkpoint_path.exists() and class_map_path.exists():
-    try:
-        saved_classes = json.loads(class_map_path.read_text(encoding="utf-8"))
-        if saved_classes == class_names:
-            previous_model = load_model(checkpoint_path, compile=False)
-            if int(previous_model.output_shape[-1]) == train_data.num_classes:
-                model = previous_model
-                model.compile(
-                    optimizer="adam",
-                    loss="categorical_crossentropy",
-                    metrics=["accuracy"],
-                )
-                print("Compatible saved model found; continuing training.")
-            else:
-                print("Saved model output count differs; starting a fresh model.")
-        else:
-            print("Saved class order differs; starting a fresh model.")
-    except Exception as exc:
-        print(f"Could not safely resume saved model ({exc}); starting fresh.")
 
 print("\nStarting training...\n")
 
