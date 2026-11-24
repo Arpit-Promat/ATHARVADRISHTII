@@ -305,6 +305,16 @@ if VEGETABLE_MODEL_PATH.is_file() and VEGETABLE_CLASSES_PATH.is_file():
         "vegetable_leaf",
     )
 
+# The dedicated Guava model is exposed only after both trained artifacts exist.
+GUAVA_MODEL_PATH = Path("models/guava_leaf_model.keras")
+GUAVA_CLASSES_PATH = Path("models/guava_leaf_class_names.json")
+if GUAVA_MODEL_PATH.is_file() and GUAVA_CLASSES_PATH.is_file():
+    MODEL_OPTIONS["Guava — Leaf Health Classifier"] = (
+        str(GUAVA_MODEL_PATH),
+        str(GUAVA_CLASSES_PATH),
+        "guava",
+    )
+
 selected_model_label = st.selectbox(
     "Choose AI Model",
     options=list(MODEL_OPTIONS.keys()),
