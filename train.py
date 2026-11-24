@@ -4,6 +4,7 @@ from pathlib import Path
 import tensorflow as tf
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras.applications import MobileNetV2
+from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
 from tensorflow.keras.layers import GlobalAveragePooling2D, Dense, Dropout
 from tensorflow.keras.models import Model
 from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
@@ -32,7 +33,7 @@ print("Validation folder:", VAL_DIR)
 # DATA AUGMENTATION
 # =========================
 train_datagen = ImageDataGenerator(
-    rescale=1.0 / 255,
+    preprocessing_function=preprocess_input,
     rotation_range=20,
     width_shift_range=0.15,
     height_shift_range=0.15,
@@ -41,7 +42,7 @@ train_datagen = ImageDataGenerator(
 )
 
 val_datagen = ImageDataGenerator(
-    rescale=1.0 / 255
+    preprocessing_function=preprocess_input
 )
 
 # =========================
