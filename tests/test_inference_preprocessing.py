@@ -12,13 +12,17 @@ class InferencePreprocessingTests(unittest.TestCase):
             dtype=np.uint8,
         )
 
-    def test_general_and_mango_are_scaled_to_zero_one(self):
-        for key in ("general", "mango"):
-            with self.subTest(model=key):
-                batch = preprocess_rgb_array(self.rgb, key)
-                self.assertEqual(batch.shape, (1, 2, 2, 3))
-                self.assertAlmostEqual(float(batch.max()), 1.0)
-                self.assertAlmostEqual(float(batch.min()), 0.0)
+    def test_general_uses_mobilenet_v2_minus_one_to_one(self):
+        batch = preprocess_rgb_array(self.rgb, "general")
+        self.assertEqual(batch.shape, (1, 2, 2, 3))
+        self.assertAlmostEqual(float(batch.max()), 1.0)
+        self.assertAlmostEqual(float(batch.min()), -1.0)
+
+    def test_mango_remains_scaled_zero_to_one(self):
+        batch = preprocess_rgb_array(self.rgb, "mango")
+        self.assertEqual(batch.shape, (1, 2, 2, 3))
+        self.assertAlmostEqual(float(batch.max()), 1.0)
+        self.assertAlmostEqual(float(batch.min()), 0.0)
 
     def test_mobilenet_rescaling_models_keep_raw_pixels(self):
         for key in ("fruitleaf6", "wheat", "rice_pest"):
