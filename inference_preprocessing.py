@@ -1,6 +1,6 @@
 """Model-aware image scaling helpers shared by Streamlit inference.
 
-General and Mango classifiers were trained on RGB inputs scaled to [0, 1].
+The corrected PlantDoc classifier and leaf detector use MobileNetV2 preprocessing [-1, 1].\nMango remains on its original [0, 1] preprocessing until separately retrained.
 FruitLeaf6, Wheat and Rice Pest models include an internal MobileNetV2-style
 Rescaling(1/127.5, offset=-1) layer and therefore expect raw RGB [0, 255].
 """
@@ -21,7 +21,9 @@ def preprocess_rgb_array(rgb_array: np.ndarray, model_key: str) -> np.ndarray:
     if float(image.min()) < 0.0 or float(image.max()) > 255.0:
         raise ValueError("RGB pixel values must be in the [0, 255] range.")
 
-    if model_key not in RAW_PIXEL_MODEL_KEYS:
+    if model_key == "general":
+        image = image / 127.5 - 1.0
+    elif model_key not in RAW_PIXEL_MODEL_KEYS:
         image = image / 255.0
 
     return np.expand_dims(image, axis=0)
@@ -34,6 +36,8 @@ def batch_to_uint8_rgb(image_batch: np.ndarray, model_key: str) -> np.ndarray:
         raise ValueError(f"Expected a single-image NHWC batch, got shape {batch.shape}.")
 
     image = batch[0]
-    if model_key not in RAW_PIXEL_MODEL_KEYS:
+    if model_key == "general":
+        image = (image + 1.0) * 127.5
+    elif model_key not in RAW_PIXEL_MODEL_KEYS:
         image = image * 255.0
     return np.clip(np.rint(image), 0, 255).astype(np.uint8)
